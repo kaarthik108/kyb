@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { startBrandAnalysis } from "@/app/actions/brand-analysis";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -60,22 +61,16 @@ export default function Home() {
     setError(null);
     
     try {
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(brandData),
-      });
+      console.log('Starting analysis for:', brandData);
+      const result = await startBrandAnalysis(brandData);
+      console.log('Analysis result:', result);
 
-      if (!response.ok) {
-        throw new Error('Failed to start brand analysis');
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to start brand analysis');
       }
 
-      const data = await response.json();
-      
       // Generate a dashboard ID for the URL
-      const dashboardId = data.dashboardId || `dashboard-${Date.now()}`;
+      const dashboardId = `dashboard-${Date.now()}`;
       
       // Redirect to dashboard with query params
       const searchParams = new URLSearchParams({
@@ -84,9 +79,11 @@ export default function Home() {
         category: brandData.category,
       });
       
+      console.log('Redirecting to:', `/dashboard/${dashboardId}?${searchParams.toString()}`);
       router.push(`/dashboard/${dashboardId}?${searchParams.toString()}`);
       
     } catch (err) {
+      console.error('Analysis error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
       setLoading(false);
     }
@@ -98,7 +95,13 @@ export default function Home() {
   };
 
   const handlePredefinedBrand = async (brand: typeof predefinedBrands[0]) => {
-    await handleAnalyze(brand);
+    // Extract only the serializable fields needed for analysis
+    const brandData = {
+      brand: brand.brand,
+      location: brand.location,
+      category: brand.category
+    };
+    await handleAnalyze(brandData);
   };
 
 

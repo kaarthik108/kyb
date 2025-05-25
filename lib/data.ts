@@ -264,6 +264,14 @@ export const dashboardData: ApiResponse = {
 export const transformApiData = (apiData: ApiResponse) => {
   const platforms = ['twitter', 'linkedin', 'reddit', 'news'] as const;
   
+  // Validate that all required platform data exists
+  for (const platform of platforms) {
+    const platformKey = `analysis_results_${platform}` as keyof ApiResponse;
+    if (!apiData[platformKey]) {
+      throw new Error(`Missing platform data for ${platform}`);
+    }
+  }
+  
   // Calculate overall sentiment
   let totalMentions = 0;
   let totalPositive = 0;
@@ -274,10 +282,15 @@ export const transformApiData = (apiData: ApiResponse) => {
     const platformKey = `analysis_results_${platform}` as keyof ApiResponse;
     const platformData = apiData[platformKey] as PlatformAnalysisResult;
     
-    totalMentions += platformData.total_mentions_on_platform;
-    totalPositive += platformData.platform_sentiment_breakdown.positive * platformData.total_mentions_on_platform;
-    totalNegative += platformData.platform_sentiment_breakdown.negative * platformData.total_mentions_on_platform;
-    totalNeutral += platformData.platform_sentiment_breakdown.neutral * platformData.total_mentions_on_platform;
+    if (!platformData || !platformData.platform_sentiment_breakdown) {
+      console.error(`Invalid platform data for ${platform}:`, platformData);
+      return;
+    }
+    
+    totalMentions += platformData.total_mentions_on_platform || 0;
+    totalPositive += (platformData.platform_sentiment_breakdown.positive || 0) * (platformData.total_mentions_on_platform || 0);
+    totalNegative += (platformData.platform_sentiment_breakdown.negative || 0) * (platformData.total_mentions_on_platform || 0);
+    totalNeutral += (platformData.platform_sentiment_breakdown.neutral || 0) * (platformData.total_mentions_on_platform || 0);
   });
   
   return {

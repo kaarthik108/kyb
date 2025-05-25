@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import { startBrandAnalysis, checkDatabaseStatus, cacheResults } from "@/app/actions/brand-analysis";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Header } from "@/components/dashboard/header";
 import { SentimentAnalysis } from "@/components/dashboard/sentiment-analysis";
@@ -31,6 +32,9 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pollingInfo, setPollingInfo] = useState<{userId: string, sessionId: string} | null>(null);
+  const hasStartedRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Get brand info from URL params
   const brandInfo = {
@@ -44,19 +48,24 @@ export default function DashboardPage() {
     let attempts = 0;
     
     while (attempts < maxAttempts) {
+      // Check if polling was aborted
+      if (abortControllerRef.current?.signal.aborted) {
+        console.log('Polling aborted');
+        return;
+      }
+      
       try {
         console.log(`Polling attempt ${attempts + 1}/${maxAttempts}`);
         
-        const response = await fetch(`/api/status/${userId}/${sessionId}`);
+        const result = await checkDatabaseStatus(userId, sessionId);
         
-        if (!response.ok) {
-          throw new Error(`Status check failed: ${response.status}`);
+        if (!result.success) {
+          throw new Error(result.error || 'Status check failed');
         }
         
-        const statusData = await response.json();
-        console.log('Status response:', statusData);
+        const statusData = result.data;
         
-        if (statusData.status === 'completed') {
+        if (statusData.status === 'completed' && statusData.results) {
           const enrichedData = {
             ...statusData.results,
             dashboardId: generateRandomId(16),
@@ -66,6 +75,9 @@ export default function DashboardPage() {
             sessionId
           };
           
+          // Cache the results
+          await cacheResults(enrichedData, brandInfo);
+          
           setData(enrichedData);
           setLoading(false);
           return;
@@ -73,7 +85,10 @@ export default function DashboardPage() {
           throw new Error(statusData.error_message || 'Analysis failed');
         }
         
-        await new Promise(resolve => setTimeout(resolve, 20000));
+        // Use timeout ref for cleanup
+        await new Promise<void>((resolve) => {
+          pollingTimeoutRef.current = setTimeout(resolve, 20000);
+        });
         attempts++;
         
       } catch (error) {
@@ -83,7 +98,9 @@ export default function DashboardPage() {
           setLoading(false);
           return;
         }
-        await new Promise(resolve => setTimeout(resolve, 20000));
+        await new Promise<void>((resolve) => {
+          pollingTimeoutRef.current = setTimeout(resolve, 20000);
+        });
         attempts++;
       }
     }
@@ -92,34 +109,38 @@ export default function DashboardPage() {
     setLoading(false);
   };
 
-  const fetchDashboardData = async () => {
+    const fetchDashboardData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(brandInfo),
-      });
+      const result = await startBrandAnalysis(brandInfo);
 
-      if (!response.ok) {
-        throw new Error('Failed to start analysis');
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to start analysis');
       }
 
-      const result = await response.json();
-      
-      // Check if we got cached results (has dashboardId or analysis data)
-      if (result.dashboardId || result.analysis_results_twitter || result.results) {
-        console.log('Got cached results, displaying immediately');
-        setData(result);
-        setLoading(false);
-      } else if (result.userId && result.sessionId && result.status === 'started') {
+      // Check if we got cached results
+      if (result.cached && result.data) {
+        console.log('Got cached results:', result.data);
+        // Validate the cached data has the required structure
+        const cachedData = result.data as any;
+        if (cachedData.analysis_results_twitter && 
+            cachedData.analysis_results_linkedin && 
+            cachedData.analysis_results_reddit && 
+            cachedData.analysis_results_news) {
+          setData(cachedData);
+          setLoading(false);
+        } else {
+          // Cached data is incomplete, treat as error
+          console.error('Cached data is incomplete:', cachedData);
+          throw new Error('Cached data is incomplete or corrupted');
+        }
+      } else if (result.data && typeof result.data === 'object' && 'userId' in result.data && 'sessionId' in result.data) {
         console.log('Starting polling for new analysis');
-        setPollingInfo({ userId: result.userId, sessionId: result.sessionId });
-        pollForResults(result.userId, result.sessionId);
+        const { userId, sessionId } = result.data as { userId: string; sessionId: string };
+        setPollingInfo({ userId, sessionId });
+        pollForResults(userId, sessionId);
       } else {
         throw new Error('Invalid response from server');
       }
@@ -131,8 +152,25 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
+    // Prevent multiple calls in StrictMode and during re-renders
+    if (hasStartedRef.current) return;
+    
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
+    hasStartedRef.current = true;
+    
     fetchDashboardData();
-  }, [dashboardId]);
+    
+    // Cleanup function
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current);
+      }
+    };
+  }, []); // Empty dependency array - only run once
 
   if (loading) {
     return (
@@ -175,7 +213,11 @@ export default function DashboardPage() {
                 <p className="text-sm text-muted-foreground mt-2">{error}</p>
               </div>
               <Button 
-                onClick={fetchDashboardData}
+                onClick={() => {
+                  hasStartedRef.current = false;
+                  abortControllerRef.current = new AbortController();
+                  fetchDashboardData();
+                }}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
