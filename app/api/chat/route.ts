@@ -5,7 +5,7 @@ import { NextRequest } from 'next/server';
 export async function POST(req: NextRequest) {
   try {
     const { messages, context } = await req.json();
-
+  
     let systemMessage = `You are a brand analytics AI assistant helping users understand their brand's digital presence and social media performance. 
 
     You have access to real-time brand sentiment analysis, platform-specific insights, ethical considerations, and social media trends. You can help users:
@@ -38,16 +38,30 @@ ${context.platforms?.twitter?.ethical_highlights_on_platform?.slice(0, 3).map((h
 Use this context to provide specific, data-driven insights about the brand's performance.`;
     }
 
+
     const result = await streamText({
-      model: openai('o4-mini'),
+      model: openai('gpt-4o-mini'),
       system: systemMessage,
       messages: convertToCoreMessages(messages),
       maxTokens: 500,
+      temperature: 0.7,
     });
 
     return result.toDataStreamResponse();
   } catch (error) {
     console.error('Chat API Error:', error);
-    return new Response('Chat service unavailable', { status: 500 });
+    
+    // Return a helpful error message
+    const errorMessage = error instanceof Error && error.message.includes('API key') 
+      ? 'OpenAI API key not configured. Please add OPENAI_API_KEY to your .env.local file.'
+      : 'Chat service temporarily unavailable. Please try again.';
+    
+    return new Response(JSON.stringify({ 
+      error: errorMessage,
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 } 
