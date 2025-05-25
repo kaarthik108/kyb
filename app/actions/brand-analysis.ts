@@ -52,6 +52,7 @@ export async function startBrandAnalysis(brandData: { brand: string; location: s
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'brand-analytics-dashboard/1.0',
+        'Authorization': `Bearer ${process.env.API_TOKEN}`,
       },
       body: JSON.stringify({
         userId,

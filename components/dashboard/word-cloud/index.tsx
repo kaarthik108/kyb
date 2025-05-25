@@ -76,7 +76,7 @@ export function WordCloudSection({ data }: WordCloudSectionProps) {
               </CardHeader>
               <CardContent className="space-y-2">
                 {sentimentWords.map((word, index) => (
-                  <div key={word.text} className="flex items-center justify-between">
+                  <div key={`${sentiment}-${word.text}-${index}`} className="flex items-center justify-between">
                     <span className="text-sm text-gray-300">{word.text}</span>
                     <div className="flex items-center gap-2">
                       <div className="w-12 bg-gray-700 rounded-full h-1.5">

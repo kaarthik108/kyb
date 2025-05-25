@@ -78,7 +78,7 @@ export function EthicalHighlights({ data }: EthicalHighlightsProps) {
                 {highlights.map((highlight, index) => {
                   const Icon = highlight.icon;
                   return (
-                    <div key={index} className="p-4 rounded-lg bg-gray-800/50 border border-gray-700/50">
+                    <div key={`${category}-${index}`} className="p-4 rounded-lg bg-gray-800/50 border border-gray-700/50">
                       <div className="flex items-start gap-3">
                         <Icon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${
                           highlight.color === 'emerald' ? 'text-emerald-400' :
