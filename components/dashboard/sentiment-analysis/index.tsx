@@ -1,226 +1,122 @@
+"use client";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TrendChart } from "./trend-chart";
 import { PlatformBreakdown } from "./platform-breakdown";
 import { ComparativeCards } from "./comparative-cards";
-import { dashboardData } from "@/lib/data";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { ThumbsUp, ThumbsDown, Minus, ArrowUpRight, ArrowDownRight, Info } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { TrendingUp, TrendingDown, Activity } from "lucide-react";
 
-export function SentimentAnalysis() {
-  const { platform_sentiment, overall_sentiment } = dashboardData;
-
-  // Calculate overall percentages and round them
-  const positivePercent = Math.round(overall_sentiment.positive);
-  const neutralPercent = Math.round(overall_sentiment.neutral);
-  const negativePercent = Math.round(overall_sentiment.negative);
-
-  // Calculate sentiment score (0-100)
-  const sentimentScore = positivePercent;
-  
-  // Determine sentiment trend indicators
-  const getPlatformTrend = (sentiment: number) => {
-    if (sentiment >= 65) return { 
-      icon: <ArrowUpRight className="h-4 w-4 text-emerald-500" />, 
-      text: "text-emerald-500",
-      message: "Strong positive sentiment"
+interface SentimentAnalysisProps {
+  data: {
+    brand_name: string;
+    total_mentions: number;
+    overall_sentiment: {
+      positive: number;
+      negative: number;
+      neutral: number;
     };
-    if (sentiment >= 50) return { 
-      icon: <ArrowUpRight className="h-4 w-4 text-emerald-400" />, 
-      text: "text-emerald-400",
-      message: "Moderate positive sentiment"
-    };
-    if (sentiment >= 40) return { 
-      icon: <Minus className="h-4 w-4 text-blue-500" />, 
-      text: "text-blue-500",
-      message: "Neutral sentiment"
-    };
-    if (sentiment >= 30) return { 
-      icon: <ArrowDownRight className="h-4 w-4 text-amber-500" />, 
-      text: "text-amber-500",
-      message: "Concerning sentiment"
-    };
-    return { 
-      icon: <ArrowDownRight className="h-4 w-4 text-red-500" />, 
-      text: "text-red-500",
-      message: "Critical negative sentiment"
+    platform_sentiment: {
+      [key: string]: {
+        positive: number;
+        negative: number;
+        neutral: number;
+        count: number;
+      };
     };
   };
+}
 
-  const overallTrend = getPlatformTrend(sentimentScore);
+export function SentimentAnalysis({ data }: SentimentAnalysisProps) {
+  const overallSentiment = data.overall_sentiment;
+  
+  const mockTrendData = [
+    { date: "2024-01", positive: 45, neutral: 35, negative: 20 },
+    { date: "2024-02", positive: 52, neutral: 28, negative: 20 },
+    { date: "2024-03", positive: 48, neutral: 32, negative: 20 },
+    { date: "2024-04", positive: overallSentiment.positive, neutral: overallSentiment.neutral, negative: overallSentiment.negative }
+  ];
+
+  const getPlatformTrend = (sentiment: number) => {
+    return sentiment > 50 ? "positive" : sentiment < 30 ? "negative" : "neutral";
+  };
+
+  const getSentimentColor = (sentiment: string) => {
+    switch (sentiment) {
+      case "positive": return "text-emerald-400";
+      case "negative": return "text-red-400";
+      default: return "text-amber-400";
+    }
+  };
+
+  const getSentimentIcon = (sentiment: string) => {
+    switch (sentiment) {
+      case "positive": return TrendingUp;
+      case "negative": return TrendingDown;
+      default: return Activity;
+    }
+  };
 
   return (
-    <div className="mb-8">
-      <h2 className="text-xl font-bold mb-4">
-        <div className="flex items-center gap-2">
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
           Sentiment Analysis
-          <div className="relative group">
-            <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-            <div className="absolute hidden group-hover:block z-10 bottom-full mb-2 bg-card shadow-lg p-2 rounded text-xs text-muted-foreground w-48">
-              Analysis of brand sentiment across platforms with insights
-            </div>
-          </div>
-        </div>
-      </h2>
-      
-      {/* Overall sentiment summary card */}
-      <Card className="mb-6 border-l-4 border-l-blue-500 overflow-hidden">
-        <CardContent className="p-0">
-          <div className="grid grid-cols-1 md:grid-cols-3">
-            {/* Left: Sentiment gauge */}
-            <div className="p-6 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-border">
-              <div className="mb-3 text-lg font-medium text-center">Overall Sentiment</div>
-              <div className="relative flex items-center justify-center">
-                {/* Background gauge */}
-                <div className="w-36 h-36 rounded-full border-8 border-muted relative">
-                  {/* Gauge progress */}
-                  <svg className="w-full h-full absolute top-0 left-0" viewBox="0 0 100 100">
-                    <circle 
-                      cx="50" 
-                      cy="50" 
-                      r="46" 
-                      fill="none" 
-                      strokeWidth="8"
-                      stroke={sentimentScore >= 65 ? "rgb(52, 211, 153)" : 
-                             sentimentScore >= 50 ? "rgb(96, 165, 250)" :
-                             sentimentScore >= 30 ? "rgb(251, 191, 36)" : "rgb(248, 113, 113)"}
-                      strokeDasharray="289.5"
-                      strokeDashoffset={289.5 - (289.5 * sentimentScore / 100)}
-                      strokeLinecap="round"
-                      transform="rotate(-90, 50, 50)"
-                      className="transition-all duration-1000 ease-out"
-                    />
-                  </svg>
-                  
-                  {/* Value */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <div className="text-3xl font-bold">{sentimentScore}</div>
-                    <div className="text-xs text-muted-foreground">Score</div>
-                  </div>
+        </h2>
+        <p className="text-muted-foreground">Real-time sentiment tracking across all platforms</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {Object.entries({ 
+          Positive: { value: overallSentiment.positive, color: "emerald", trend: "positive" },
+          Neutral: { value: overallSentiment.neutral, color: "amber", trend: "neutral" },
+          Negative: { value: overallSentiment.negative, color: "red", trend: "negative" }
+        }).map(([key, { value, color, trend }]) => {
+          const Icon = getSentimentIcon(trend);
+          return (
+            <Card key={key} className="border-white/10 bg-gradient-to-br from-gray-900/50 to-gray-800/50 backdrop-blur-sm hover:border-white/20 transition-all duration-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-gray-300">{key} Sentiment</CardTitle>
+                <Icon className={`h-4 w-4 ${getSentimentColor(trend)}`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-white">{value.toFixed(1)}%</div>
+                <div className={`w-full bg-gray-700 rounded-full h-2 mt-2`}>
+                  <div 
+                    className={`h-2 rounded-full bg-gradient-to-r ${
+                      color === 'emerald' ? 'from-emerald-600 to-emerald-400' :
+                      color === 'amber' ? 'from-amber-600 to-amber-400' :
+                      'from-red-600 to-red-400'
+                    }`}
+                    style={{ width: `${value}%` }}
+                  />
                 </div>
-              </div>
-              <div className={`flex items-center gap-1.5 mt-4 font-medium ${overallTrend.text}`}>
-                {overallTrend.icon}
-                <span>{overallTrend.message}</span>
-              </div>
-            </div>
-            
-            {/* Middle: Sentiment distribution */}
-            <div className="p-6 border-b md:border-b-0 md:border-r border-border">
-              <div className="mb-4 text-lg font-medium">Sentiment Breakdown</div>
-              
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                      <span>Positive</span>
-                    </div>
-                    <span className="font-medium">{positivePercent}%</span>
-                  </div>
-                  <motion.div 
-                    className="bg-muted rounded-full h-2 w-full overflow-hidden"
-                    initial={{ width: 0 }}
-                    animate={{ width: "100%" }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <motion.div 
-                      className="bg-emerald-500 h-full" 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${positivePercent}%` }}
-                      transition={{ duration: 0.8, delay: 0.1 }}
-                    />
-                  </motion.div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                      <span>Neutral</span>
-                    </div>
-                    <span className="font-medium">{neutralPercent}%</span>
-                  </div>
-                  <motion.div 
-                    className="bg-muted rounded-full h-2 w-full overflow-hidden"
-                    initial={{ width: 0 }}
-                    animate={{ width: "100%" }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <motion.div 
-                      className="bg-blue-500 h-full" 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${neutralPercent}%` }}
-                      transition={{ duration: 0.8, delay: 0.2 }}
-                    />
-                  </motion.div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                      <span>Negative</span>
-                    </div>
-                    <span className="font-medium">{negativePercent}%</span>
-                  </div>
-                  <motion.div 
-                    className="bg-muted rounded-full h-2 w-full overflow-hidden"
-                    initial={{ width: 0 }}
-                    animate={{ width: "100%" }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <motion.div 
-                      className="bg-red-500 h-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${negativePercent}%` }}
-                      transition={{ duration: 0.8, delay: 0.3 }}
-                    />
-                  </motion.div>
-                </div>
-              </div>
-              
-              <div className="mt-4 pt-4 border-t border-border">
-                <div className="text-sm text-muted-foreground">
-                  {positivePercent > negativePercent ? 
-                    `Positive sentiment exceeds negative by ${positivePercent - negativePercent}%` : 
-                    negativePercent > positivePercent ?
-                    `Negative sentiment exceeds positive by ${negativePercent - positivePercent}%` :
-                    `Equal positive and negative sentiment`
-                  }
-                </div>
-              </div>
-            </div>
-            
-            {/* Right: Key insights */}
-            <div className="p-6">
-              <div className="mb-4 text-lg font-medium">Sentiment Insights</div>
-              
-              <div className="space-y-3 text-sm">
-                <div className="p-3 bg-emerald-500/10 rounded-md border border-emerald-500/20">
-                  <div className="font-medium text-emerald-600 dark:text-emerald-400">Strongest Positive</div>
-                  <div className="mt-1">Most positive discussion centers around sustainability initiatives and electric vehicle innovation.</div>
-                </div>
-                
-                {negativePercent > 15 && (
-                  <div className="p-3 bg-red-500/10 rounded-md border border-red-500/20">
-                    <div className="font-medium text-red-600 dark:text-red-400">Key Concern</div>
-                    <div className="mt-1">Negative sentiment largely stems from production concerns and competitor comparisons.</div>
-                  </div>
-                )}
-                
-                <div className="p-3 bg-blue-500/10 rounded-md border border-blue-500/20">
-                  <div className="font-medium text-blue-600 dark:text-blue-400">Trend Analysis</div>
-                  <div className="mt-1">Sentiment has improved by 4.2% over the previous period, showing positive momentum.</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      {/* Per platform sentiment - now full width */}
-      <ComparativeCards data={platform_sentiment} />
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <Card className="border-white/10 bg-gradient-to-br from-gray-900/50 to-gray-800/50 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-xl text-white">Sentiment Trends</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TrendChart data={mockTrendData} />
+          </CardContent>
+        </Card>
+
+        <Card className="border-white/10 bg-gradient-to-br from-gray-900/50 to-gray-800/50 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-xl text-white">Platform Breakdown</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PlatformBreakdown data={data.platform_sentiment} />
+          </CardContent>
+        </Card>
+      </div>
+
+      <ComparativeCards data={data.platform_sentiment} />
     </div>
   );
 }
