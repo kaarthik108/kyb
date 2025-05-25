@@ -12,14 +12,27 @@ interface EthicalHighlightsProps {
 
 export function EthicalHighlights({ data }: EthicalHighlightsProps) {
   const categorizeHighlight = (highlight: string) => {
-    const positive = ['sustainability', 'innovation', 'leadership', 'initiatives', 'responsibility', 'renewable', 'clean'];
-    const negative = ['controversy', 'challenge', 'concern', 'harassment', 'lawsuit', 'criticism', 'ethics'];
+    const positive = [
+      'sustainability', 'innovation', 'leadership', 'initiatives', 'responsibility', 
+      'renewable', 'clean', 'driver responsibility', 'technological innovation',
+      'autonomous vehicle technology', 'future mobility', 'clean energy',
+      'manufacturing', 'domestic', 'made in america'
+    ];
+    const negative = [
+      'controversy', 'controversies', 'harassment', 'lawsuit', 'criticism', 
+      'workplace ethics', 'labor practices', 'business challenges', 
+      'customer service', 'product quality', 'quality concerns',
+      'challenges', 'concerns', 'financial performance', 'competition'
+    ];
     
     const lowerHighlight = highlight.toLowerCase();
     
-    if (positive.some(word => lowerHighlight.includes(word))) {
+    const hasPositive = positive.some(word => lowerHighlight.includes(word));
+    const hasNegative = negative.some(word => lowerHighlight.includes(word));
+    
+    if (hasPositive && !hasNegative) {
       return { type: 'positive', icon: CheckCircle, color: 'emerald' };
-    } else if (negative.some(word => lowerHighlight.includes(word))) {
+    } else if (hasNegative && !hasPositive) {
       return { type: 'negative', icon: AlertTriangle, color: 'red' };
     }
     return { type: 'neutral', icon: Info, color: 'blue' };

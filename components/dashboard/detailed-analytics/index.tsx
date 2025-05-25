@@ -1,48 +1,52 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { dashboardData } from "@/lib/data";
+import { ApiResponse } from "@/lib/data";
 import { Twitter, Linkedin, MessageSquare, Newspaper } from "lucide-react";
 
-export function DetailedAnalytics() {
-  // Using data from image for visual consistency
+interface DetailedAnalyticsProps {
+  data: ApiResponse;
+}
+
+export function DetailedAnalytics({ data }: DetailedAnalyticsProps) {
+  // Extract platform metrics from API data
   const platformMetrics = [
     {
       platform: "Twitter",
       icon: <Twitter className="h-5 w-5" />,
       metrics: {
-        mentions: 64329,
-        reach: "8.7M",
-        engagement: "2.3%",
-        sentiment: 73,
+        mentions: data.analysis_results_twitter.total_mentions_on_platform,
+        reach: "8.7M", // This would come from API in real implementation
+        engagement: "2.3%", // This would come from API in real implementation
+        sentiment: Math.round(data.analysis_results_twitter.platform_sentiment_breakdown.positive * 100),
       },
     },
     {
       platform: "LinkedIn",
       icon: <Linkedin className="h-5 w-5" />,
       metrics: {
-        mentions: 27890,
-        reach: "4.2M",
-        engagement: "3.8%",
-        sentiment: 82,
+        mentions: data.analysis_results_linkedin.total_mentions_on_platform,
+        reach: "4.2M", // This would come from API in real implementation
+        engagement: "3.8%", // This would come from API in real implementation
+        sentiment: Math.round(data.analysis_results_linkedin.platform_sentiment_breakdown.positive * 100),
       },
     },
     {
       platform: "Reddit",
       icon: <MessageSquare className="h-5 w-5" />,
       metrics: {
-        mentions: 18432,
-        reach: "3.1M",
-        engagement: "4.2%",
-        sentiment: 68,
+        mentions: data.analysis_results_reddit.total_mentions_on_platform,
+        reach: "3.1M", // This would come from API in real implementation
+        engagement: "4.2%", // This would come from API in real implementation
+        sentiment: Math.round(data.analysis_results_reddit.platform_sentiment_breakdown.positive * 100),
       },
     },
     {
       platform: "News",
       icon: <Newspaper className="h-5 w-5" />,
       metrics: {
-        mentions: 12983,
-        reach: "12.5M",
-        engagement: "1.7%",
-        sentiment: 74,
+        mentions: data.analysis_results_news.total_mentions_on_platform,
+        reach: "12.5M", // This would come from API in real implementation
+        engagement: "1.7%", // This would come from API in real implementation
+        sentiment: Math.round(data.analysis_results_news.platform_sentiment_breakdown.positive * 100),
       },
     },
   ];

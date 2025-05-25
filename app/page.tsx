@@ -72,12 +72,22 @@ export default function Home() {
       // Generate a dashboard ID for the URL
       const dashboardId = `dashboard-${Date.now()}`;
       
-      // Redirect to dashboard with query params
+      // Prepare search params
       const searchParams = new URLSearchParams({
         brand: brandData.brand,
         location: brandData.location,
         category: brandData.category,
       });
+
+      // If we got cached results, add a flag
+      if (result.cached) {
+        searchParams.set('cached', 'true');
+      } else if (result.data && typeof result.data === 'object' && 'userId' in result.data && 'sessionId' in result.data) {
+        // Add userId and sessionId for polling
+        const { userId, sessionId } = result.data as { userId: string; sessionId: string };
+        searchParams.set('userId', userId);
+        searchParams.set('sessionId', sessionId);
+      }
       
       console.log('Redirecting to:', `/dashboard/${dashboardId}?${searchParams.toString()}`);
       router.push(`/dashboard/${dashboardId}?${searchParams.toString()}`);

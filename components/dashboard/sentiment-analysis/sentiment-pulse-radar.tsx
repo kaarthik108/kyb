@@ -57,22 +57,22 @@ export function SentimentPulseRadar({ data }: SentimentPulseRadarProps) {
     const angleStep = (2 * Math.PI) / platforms.length;
     
     return platforms.map(([platform, sentiment], index) => {
-      const total = sentiment.positive + sentiment.negative + sentiment.neutral;
-      const positivePercent = (sentiment.positive / total) * 100;
-      const negativePercent = (sentiment.negative / total) * 100;
+      const positivePercent = sentiment.positive;
+      const negativePercent = sentiment.negative;
+      const neutralPercent = sentiment.neutral;
       
-      // Calculate dominant sentiment and intensity
       let dominantSentiment: "positive" | "negative" | "neutral" = "neutral";
-      let intensity = 50; // Base intensity
+      let intensity = 20;
       
-      if (positivePercent > negativePercent && positivePercent > (sentiment.neutral / total) * 100) {
+      if (positivePercent > negativePercent && positivePercent > neutralPercent) {
         dominantSentiment = "positive";
-        intensity = Math.min(90, 30 + positivePercent);
-      } else if (negativePercent > positivePercent && negativePercent > (sentiment.neutral / total) * 100) {
+        intensity = Math.max(20, Math.min(90, positivePercent));
+      } else if (negativePercent > positivePercent && negativePercent > neutralPercent) {
         dominantSentiment = "negative";
-        intensity = Math.min(90, 30 + negativePercent);
+        intensity = Math.max(20, Math.min(90, negativePercent));
       } else {
-        intensity = Math.min(90, 30 + ((sentiment.neutral / total) * 100));
+        dominantSentiment = "neutral";
+        intensity = Math.max(20, Math.min(90, neutralPercent));
       }
 
       const colors = {
