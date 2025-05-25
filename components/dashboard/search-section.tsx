@@ -18,8 +18,6 @@ import {
 } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { dashboardData } from "@/lib/data";
-
 export function SearchSection() {
   const [searchQuery, setSearchQuery] = useState("");
   const [location, setLocation] = useState("");
@@ -27,7 +25,13 @@ export function SearchSection() {
   const [timePeriod, setTimePeriod] = useState("30d");
   const [date, setDate] = useState<Date>();
 
-  const { timePeriods } = dashboardData;
+  // Mock time periods for the UI
+  const timePeriods = [
+    { label: "Last 7 days", value: "7d" },
+    { label: "Last 30 days", value: "30d" },
+    { label: "Last 90 days", value: "90d" },
+    { label: "Custom", value: "custom" }
+  ];
 
   const handleSearch = () => {
     console.log("Search:", { searchQuery, location, category, timePeriod, date });

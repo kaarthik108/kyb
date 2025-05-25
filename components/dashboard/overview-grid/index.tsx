@@ -1,10 +1,11 @@
 import { MentionsCard } from "./mentions-card";
 import { SentimentCard } from "./sentiment-card";
 import { PlatformDistributionCard } from "./platform-distribution-card";
-import { dashboardData } from "@/lib/data";
+import { dashboardData, transformApiData } from "@/lib/data";
 
 export function OverviewGrid() {
-  const { total_mentions, overall_sentiment, platform_sentiment } = dashboardData;
+  const transformedData = transformApiData(dashboardData);
+  const { total_mentions, overall_sentiment, platform_sentiment } = transformedData;
 
   // Calculate platform distribution from platform_sentiment
   const platformDistribution = Object.entries(platform_sentiment).map(([name, data]) => ({

@@ -95,7 +95,7 @@ export function HighlightCard({ highlight }: HighlightCardProps) {
       >
         <CardContent className="p-5">
           <div className="flex justify-between items-start">
-            <Badge variant={highlight.sentiment === "positive" ? "success" : highlight.sentiment === "negative" ? "destructive" : "outline"} className="mb-2">
+            <Badge variant={highlight.sentiment === "positive" ? "default" : highlight.sentiment === "negative" ? "destructive" : "outline"} className="mb-2">
               <span className="flex items-center gap-1.5">
                 {getContextIcon(highlight.context)}
                 {highlight.context}

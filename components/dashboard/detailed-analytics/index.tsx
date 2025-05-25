@@ -47,9 +47,6 @@ export function DetailedAnalytics() {
     },
   ];
 
-  // Real platform data for actual sentiment info
-  const { platform_sentiment } = dashboardData;
-
   const getSentimentColor = (score: number) => {
     if (score >= 80) return "text-emerald-500";
     if (score >= 70) return "text-amber-500";

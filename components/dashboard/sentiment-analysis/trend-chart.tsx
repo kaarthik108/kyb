@@ -66,11 +66,12 @@ export function TrendChart({ data }: TrendChartProps) {
               />
               <Legend 
                 formatter={(value) => {
-                  return {
+                  const labels: Record<string, string> = {
                     positive: 'Positive',
                     neutral: 'Neutral',
                     negative: 'Negative'
-                  }[value] || value;
+                  };
+                  return labels[value as string] || value;
                 }}
               />
               <Area 

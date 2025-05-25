@@ -25,11 +25,12 @@ export function GeographicDistribution({ data }: GeographicDistributionProps) {
                 <span className="text-sm font-medium">{item.region}</span>
                 <span className="text-sm font-medium">{item.percentage}%</span>
               </div>
-              <Progress 
-                value={item.percentage} 
-                className="h-2" 
-                indicatorClassName={`${index === 0 ? 'bg-chart-1' : index === 1 ? 'bg-chart-2' : index === 2 ? 'bg-chart-3' : 'bg-chart-4'}`}
-              />
+              <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
+                <div 
+                  className={`h-full transition-all ${index === 0 ? 'bg-chart-1' : index === 1 ? 'bg-chart-2' : index === 2 ? 'bg-chart-3' : 'bg-chart-4'}`}
+                  style={{ width: `${item.percentage}%` }}
+                />
+              </div>
             </div>
           ))}
         </div>

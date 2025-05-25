@@ -98,19 +98,31 @@ export default function Home() {
     await handleAnalyze(brand);
   };
 
+
+
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex flex-col items-center justify-center min-h-screen gap-6">
+        <div className="flex flex-col items-center justify-center min-h-screen gap-8">
           <div className="relative">
             <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-blue-500"></div>
             <div className="absolute inset-0 animate-ping rounded-full h-20 w-20 border-t-2 border-blue-400 opacity-20"></div>
           </div>
-          <div className="text-center space-y-2">
-            <p className="text-lg font-poppins font-semibold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+          <div className="text-center space-y-4 max-w-md">
+            <p className="text-xl font-poppins font-semibold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
               Analyzing brand data...
             </p>
-            <p className="text-sm text-muted-foreground font-medium">Gathering insights from social platforms</p>
+            <p className="text-sm text-muted-foreground font-medium">
+              Our AI agents are gathering insights from multiple platforms
+            </p>
+            <div className="p-4 rounded-lg bg-amber-900/20 border border-amber-500/30">
+              <p className="text-amber-400 text-sm font-medium">
+                ⏱️ This process typically takes 60-80 seconds
+              </p>
+              <p className="text-amber-300/70 text-xs mt-1">
+                We're analyzing Twitter, LinkedIn, Reddit, and News sources in real-time
+              </p>
+            </div>
           </div>
         </div>
       </DashboardLayout>
@@ -187,7 +199,7 @@ export default function Home() {
                       disabled={loading}
                     >
                       <Sparkles className="h-4 w-4 mr-2" />
-                      Analyze {brand.brand}
+                      {loading ? 'Analyzing...' : `Analyze ${brand.brand}`}
                     </Button>
                   </CardFooter>
                 </Card>
