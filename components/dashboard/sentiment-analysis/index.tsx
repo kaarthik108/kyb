@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendChart } from "./trend-chart";
+import { SentimentPulseRadar } from "./sentiment-pulse-radar";
 import { PlatformBreakdown } from "./platform-breakdown";
 import { ComparativeCards } from "./comparative-cards";
 import { TrendingUp, TrendingDown, Activity } from "lucide-react";
@@ -28,13 +28,6 @@ interface SentimentAnalysisProps {
 
 export function SentimentAnalysis({ data }: SentimentAnalysisProps) {
   const overallSentiment = data.overall_sentiment;
-  
-  const mockTrendData = [
-    { date: "2024-01", positive: 45, neutral: 35, negative: 20 },
-    { date: "2024-02", positive: 52, neutral: 28, negative: 20 },
-    { date: "2024-03", positive: 48, neutral: 32, negative: 20 },
-    { date: "2024-04", positive: overallSentiment.positive, neutral: overallSentiment.neutral, negative: overallSentiment.negative }
-  ];
 
   const getPlatformTrend = (sentiment: number) => {
     return sentiment > 50 ? "positive" : sentiment < 30 ? "negative" : "neutral";
@@ -97,14 +90,7 @@ export function SentimentAnalysis({ data }: SentimentAnalysisProps) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card className="border-white/10 bg-gradient-to-br from-gray-900/50 to-gray-800/50 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-xl text-white">Sentiment Trends</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TrendChart data={mockTrendData} />
-          </CardContent>
-        </Card>
+        <SentimentPulseRadar data={data} />
 
         <PlatformBreakdown data={data.platform_sentiment} />
       </div>
