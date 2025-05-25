@@ -25,7 +25,6 @@ export async function POST(request: NextRequest) {
     
     const cacheKey = generateCacheKey(brand, location, category);
     
-    // Check cache first
     console.log('Checking cache for:', cacheKey);
     const cachedData = await redis.get(cacheKey);
     
@@ -34,14 +33,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(cachedData);
     }
     
-    console.log('Cache miss. Making API request...');
+    console.log('Cache miss. Starting analysis...');
     
     const sessionId = `session-${generateRandomId(12)}`;
     const userId = `user-${generateRandomId(8)}`;
     
     const question = `analyze the brand ${brand} ${location} ${category}`;
     
-    console.log('Making API request with:', { userId, sessionId, question });
+    console.log('Starting analysis with:', { userId, sessionId, question });
     
     const response = await fetch(process.env.ENDPOINT_URL + '/query', {
       method: 'POST',
@@ -52,33 +51,30 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         userId,
         sessionId,
-        question
+        question,
+        brand_name: brand
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`API responded with status: ${response.status}`);
+      throw new Error(`Failed to start analysis: ${response.status}`);
     }
 
-    const data = await response.json();
+    const startResponse = await response.json();
+    console.log('Analysis started:', startResponse);
     
-    // Add metadata for dashboard tracking
-    const enrichedData = {
-      ...data,
-      dashboardId: generateRandomId(16),
-      generatedAt: new Date().toISOString(),
-      query: { brand, location, category }
-    };
-
-    // Cache the result for 1 hour (3600 seconds)
-    await redis.set(cacheKey, enrichedData, { ex: 3600 });
-    console.log('Data cached successfully');
-
-    return NextResponse.json(enrichedData);
+    return NextResponse.json({
+      userId,
+      sessionId,
+      status: 'started',
+      message: 'Analysis started. Use polling to check progress.',
+      cacheKey
+    });
+    
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json(
-      { error: 'Failed to analyze brand data' },
+      { error: 'Failed to start brand analysis', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

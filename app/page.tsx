@@ -69,19 +69,22 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to analyze brand data');
+        throw new Error('Failed to start brand analysis');
       }
 
       const data = await response.json();
       
-      // Redirect to dashboard with the generated ID and query params
+      // Generate a dashboard ID for the URL
+      const dashboardId = data.dashboardId || `dashboard-${Date.now()}`;
+      
+      // Redirect to dashboard with query params
       const searchParams = new URLSearchParams({
         brand: brandData.brand,
         location: brandData.location,
         category: brandData.category,
       });
       
-      router.push(`/dashboard/${data.dashboardId}?${searchParams.toString()}`);
+      router.push(`/dashboard/${dashboardId}?${searchParams.toString()}`);
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -117,10 +120,10 @@ export default function Home() {
             </p>
             <div className="p-4 rounded-lg bg-amber-900/20 border border-amber-500/30">
               <p className="text-amber-400 text-sm font-medium">
-                ⏱️ This process typically takes 60-80 seconds
+                ⏱️ This process typically takes 2-5 minutes
               </p>
               <p className="text-amber-300/70 text-xs mt-1">
-                We're analyzing Twitter, LinkedIn, Reddit, and News sources in real-time
+                We're analyzing Twitter, LinkedIn, Reddit, and News sources with polling every 20 seconds
               </p>
             </div>
           </div>

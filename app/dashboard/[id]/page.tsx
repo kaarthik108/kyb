@@ -13,7 +13,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-
+function generateRandomId(length: number = 16): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
 
 export default function DashboardPage() {
   const params = useParams();
@@ -23,12 +30,66 @@ export default function DashboardPage() {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pollingInfo, setPollingInfo] = useState<{userId: string, sessionId: string} | null>(null);
   
   // Get brand info from URL params
   const brandInfo = {
     brand: searchParams.get('brand') || 'Unknown Brand',
     location: searchParams.get('location') || 'Global',
     category: searchParams.get('category') || 'General'
+  };
+
+  const pollForResults = async (userId: string, sessionId: string) => {
+    const maxAttempts = 15;
+    let attempts = 0;
+    
+    while (attempts < maxAttempts) {
+      try {
+        console.log(`Polling attempt ${attempts + 1}/${maxAttempts}`);
+        
+        const response = await fetch(`/api/status/${userId}/${sessionId}`);
+        
+        if (!response.ok) {
+          throw new Error(`Status check failed: ${response.status}`);
+        }
+        
+        const statusData = await response.json();
+        console.log('Status response:', statusData);
+        
+        if (statusData.status === 'completed') {
+          const enrichedData = {
+            ...statusData.results,
+            dashboardId: generateRandomId(16),
+            generatedAt: new Date().toISOString(),
+            query: brandInfo,
+            userId,
+            sessionId
+          };
+          
+          setData(enrichedData);
+          setLoading(false);
+          return;
+        } else if (statusData.status === 'failed') {
+          throw new Error(statusData.error_message || 'Analysis failed');
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 20000));
+        attempts++;
+        
+      } catch (error) {
+        console.error('Polling error:', error);
+        if (attempts >= maxAttempts - 1) {
+          setError(error instanceof Error ? error.message : 'Analysis failed');
+          setLoading(false);
+          return;
+        }
+        await new Promise(resolve => setTimeout(resolve, 20000));
+        attempts++;
+      }
+    }
+    
+    setError('Analysis timed out after 5 minutes');
+    setLoading(false);
   };
 
   const fetchDashboardData = async () => {
@@ -45,12 +106,23 @@ export default function DashboardPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch dashboard data');
+        throw new Error('Failed to start analysis');
       }
 
       const result = await response.json();
-      setData(result);
-      setLoading(false);
+      
+      // Check if we got cached results (has dashboardId or analysis data)
+      if (result.dashboardId || result.analysis_results_twitter || result.results) {
+        console.log('Got cached results, displaying immediately');
+        setData(result);
+        setLoading(false);
+      } else if (result.userId && result.sessionId && result.status === 'started') {
+        console.log('Starting polling for new analysis');
+        setPollingInfo({ userId: result.userId, sessionId: result.sessionId });
+        pollForResults(result.userId, result.sessionId);
+      } else {
+        throw new Error('Invalid response from server');
+      }
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -79,10 +151,10 @@ export default function DashboardPage() {
             </p>
             <div className="p-4 rounded-lg bg-amber-900/20 border border-amber-500/30">
               <p className="text-amber-400 text-sm font-medium">
-                ⏱️ This process typically takes 60-80 seconds
+                ⏱️ This process typically takes 2-5 minutes
               </p>
               <p className="text-amber-300/70 text-xs mt-1">
-                We're analyzing Twitter, LinkedIn, Reddit, and News sources in real-time
+                We're analyzing Twitter, LinkedIn, Reddit, and News sources with polling every 20 seconds
               </p>
             </div>
           </div>
