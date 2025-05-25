@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { MapPin, Building2, Briefcase, Sparkles, AlertCircle, Zap, Apple, Monitor } from "lucide-react";
 
 const predefinedBrands = [
@@ -106,10 +107,10 @@ export default function Home() {
             <div className="absolute inset-0 animate-ping rounded-full h-20 w-20 border-t-2 border-blue-400 opacity-20"></div>
           </div>
           <div className="text-center space-y-2">
-            <p className="text-lg font-medium bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+            <p className="text-lg font-poppins font-semibold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
               Analyzing brand data...
             </p>
-            <p className="text-sm text-muted-foreground">Gathering insights from social platforms</p>
+            <p className="text-sm text-muted-foreground font-medium">Gathering insights from social platforms</p>
           </div>
         </div>
       </DashboardLayout>
@@ -122,12 +123,12 @@ export default function Home() {
         <div className="mb-8 text-center space-y-4">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-600/10 border border-blue-500/20">
             <Sparkles className="h-4 w-4 text-blue-400" />
-            <span className="text-sm font-medium text-blue-400">AI-Powered Analytics</span>
+            <span className="text-sm font-semibold text-blue-400">AI-Powered Analytics</span>
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-display bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
             Brand Intelligence Dashboard
           </h1>
-          <p className="text-muted-foreground max-w-md">
+          <p className="text-muted-foreground max-w-md font-medium">
             Harness the power of AI to understand your brand's digital presence across all major platforms
           </p>
         </div>
@@ -135,8 +136,8 @@ export default function Home() {
         {/* Predefined Brand Cards */}
         <div className="w-full max-w-4xl space-y-6">
           <div className="text-center space-y-2">
-            <h2 className="text-2xl font-semibold text-white">Quick Analysis</h2>
-            <p className="text-muted-foreground">Analyze popular brands instantly</p>
+            <h2 className="text-2xl font-display text-white">Quick Analysis</h2>
+            <p className="text-muted-foreground font-medium">Analyze popular brands instantly</p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -149,14 +150,23 @@ export default function Home() {
                   onClick={() => handlePredefinedBrand(brand)}
                 >
                   <CardHeader className="text-center space-y-4">
-                    <div className={`mx-auto p-4 rounded-xl bg-gradient-to-r ${brand.gradient} w-fit`}>
-                      <Icon className="h-8 w-8 text-white" />
+                    <div className="mx-auto w-fit relative">
+                      <BrandLogo 
+                        brandName={brand.brand} 
+                        className="h-16 w-16"
+                        fallbackIcon={
+                          <div className={`p-4 rounded-xl bg-gradient-to-r ${brand.gradient} w-fit`}>
+                            <Icon className="h-8 w-8 text-white" />
+                          </div>
+                        }
+                        showBorder={false}
+                      />
                     </div>
                     <div>
-                      <CardTitle className="text-xl text-white group-hover:text-blue-400 transition-colors">
+                      <CardTitle className="text-xl font-poppins font-bold text-white group-hover:text-blue-400 transition-colors">
                         {brand.brand}
                       </CardTitle>
-                      <CardDescription className="text-muted-foreground">
+                      <CardDescription className="text-muted-foreground font-medium">
                         {brand.description}
                       </CardDescription>
                     </div>
@@ -164,16 +174,16 @@ export default function Home() {
                   <CardContent className="text-center space-y-2">
                     <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                       <MapPin className="h-3 w-3" />
-                      <span>{brand.location}</span>
+                      <span className="font-medium">{brand.location}</span>
                     </div>
                     <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                       <Briefcase className="h-3 w-3" />
-                      <span>{brand.category}</span>
+                      <span className="font-medium">{brand.category}</span>
                     </div>
                   </CardContent>
                   <CardFooter>
                     <Button 
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white group-hover:shadow-lg transition-all duration-200"
+                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white group-hover:shadow-lg transition-all duration-200 font-semibold"
                       disabled={loading}
                     >
                       <Sparkles className="h-4 w-4 mr-2" />
@@ -189,23 +199,23 @@ export default function Home() {
         {/* Divider */}
         <div className="flex items-center gap-4 w-full max-w-md">
           <div className="flex-1 h-px bg-gradient-to-r from-transparent to-gray-600"></div>
-          <span className="text-sm text-muted-foreground">or</span>
+          <span className="text-sm text-muted-foreground font-medium">or</span>
           <div className="flex-1 h-px bg-gradient-to-l from-transparent to-gray-600"></div>
         </div>
 
         {/* Custom Analysis Form */}
         <div className="w-full max-w-md space-y-4">
           <div className="text-center">
-            <h3 className="text-xl font-semibold text-white">Custom Analysis</h3>
-            <p className="text-sm text-muted-foreground">Analyze any brand of your choice</p>
+            <h3 className="text-xl font-display text-white">Custom Analysis</h3>
+            <p className="text-sm text-muted-foreground font-medium">Analyze any brand of your choice</p>
           </div>
 
           <Card className="shadow-2xl border border-white/10 bg-gradient-to-br from-gray-900/50 to-gray-800/50 backdrop-blur-sm">
             <CardHeader className="pb-6 space-y-2">
-              <CardTitle className="text-2xl text-center bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+              <CardTitle className="text-2xl text-center font-display bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
                 Start Analysis
               </CardTitle>
-              <CardDescription className="text-center text-muted-foreground">
+              <CardDescription className="text-center text-muted-foreground font-medium">
                 Enter your brand details to generate comprehensive insights
               </CardDescription>
             </CardHeader>
@@ -214,12 +224,12 @@ export default function Home() {
                 {error && (
                   <div className="p-3 rounded-lg bg-red-900/20 border border-red-500/30 flex items-center gap-2">
                     <AlertCircle className="h-4 w-4 text-red-400" />
-                    <p className="text-sm text-red-400">{error}</p>
+                    <p className="text-sm text-red-400 font-medium">{error}</p>
                   </div>
                 )}
 
                 <div className="space-y-3">
-                  <Label htmlFor="brand" className="text-sm font-medium text-gray-200">Brand Name</Label>
+                  <Label htmlFor="brand" className="text-sm font-semibold text-gray-200">Brand Name</Label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                       <Building2 className="h-4 w-4 text-blue-400 group-focus-within:text-purple-400 transition-colors" />
@@ -228,7 +238,7 @@ export default function Home() {
                       id="brand" 
                       name="brand" 
                       placeholder="Enter brand name" 
-                      className="pl-10 bg-gray-800/50 border-gray-700 focus:border-blue-500 focus:ring-blue-500/20 text-white placeholder:text-gray-400"
+                      className="pl-10 bg-gray-800/50 border-gray-700 focus:border-blue-500 focus:ring-blue-500/20 text-white placeholder:text-gray-400 font-medium"
                       value={formData.brand}
                       onChange={handleInputChange}
                       required
@@ -237,7 +247,7 @@ export default function Home() {
                 </div>
                 
                 <div className="space-y-3">
-                  <Label htmlFor="location" className="text-sm font-medium text-gray-200">Location</Label>
+                  <Label htmlFor="location" className="text-sm font-semibold text-gray-200">Location</Label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                       <MapPin className="h-4 w-4 text-blue-400 group-focus-within:text-purple-400 transition-colors" />
@@ -246,7 +256,7 @@ export default function Home() {
                       id="location" 
                       name="location" 
                       placeholder="Global, US, Europe, etc." 
-                      className="pl-10 bg-gray-800/50 border-gray-700 focus:border-blue-500 focus:ring-blue-500/20 text-white placeholder:text-gray-400"
+                      className="pl-10 bg-gray-800/50 border-gray-700 focus:border-blue-500 focus:ring-blue-500/20 text-white placeholder:text-gray-400 font-medium"
                       value={formData.location}
                       onChange={handleInputChange}
                       required
@@ -255,7 +265,7 @@ export default function Home() {
                 </div>
                 
                 <div className="space-y-3">
-                  <Label htmlFor="category" className="text-sm font-medium text-gray-200">Category</Label>
+                  <Label htmlFor="category" className="text-sm font-semibold text-gray-200">Category</Label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                       <Briefcase className="h-4 w-4 text-blue-400 group-focus-within:text-purple-400 transition-colors" />
@@ -264,7 +274,7 @@ export default function Home() {
                       id="category" 
                       name="category" 
                       placeholder="Industry or business category" 
-                      className="pl-10 bg-gray-800/50 border-gray-700 focus:border-blue-500 focus:ring-blue-500/20 text-white placeholder:text-gray-400"
+                      className="pl-10 bg-gray-800/50 border-gray-700 focus:border-blue-500 focus:ring-blue-500/20 text-white placeholder:text-gray-400 font-medium"
                       value={formData.category}
                       onChange={handleInputChange}
                       required
@@ -276,7 +286,7 @@ export default function Home() {
                 <Button 
                   type="submit" 
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-700 hover:from-blue-700 hover:to-purple-800 text-white font-medium py-3 text-base shadow-lg hover:shadow-xl transition-all duration-200 border-0 disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-700 hover:from-blue-700 hover:to-purple-800 text-white font-semibold py-3 text-base shadow-lg hover:shadow-xl transition-all duration-200 border-0 disabled:opacity-50"
                 >
                   <Sparkles className="h-4 w-4 mr-2" />
                   {loading ? 'Analyzing...' : 'Generate Analytics'}

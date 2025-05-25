@@ -106,14 +106,7 @@ export function SentimentAnalysis({ data }: SentimentAnalysisProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-white/10 bg-gradient-to-br from-gray-900/50 to-gray-800/50 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-xl text-white">Platform Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PlatformBreakdown data={data.platform_sentiment} />
-          </CardContent>
-        </Card>
+        <PlatformBreakdown data={data.platform_sentiment} />
       </div>
 
       <ComparativeCards data={data.platform_sentiment} />

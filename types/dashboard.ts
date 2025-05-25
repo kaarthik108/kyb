@@ -61,7 +61,12 @@ export interface DailyTrend {
 }
 
 export interface PlatformSentimentData {
-  [key: string]: { positive: number; neutral: number; negative: number };
+  [key: string]: { 
+    positive: number; 
+    neutral: number; 
+    negative: number;
+    count: number;
+  };
 }
 
 export interface WordCloudItem {

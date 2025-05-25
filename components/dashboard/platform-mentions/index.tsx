@@ -108,10 +108,10 @@ export function PlatformMentions({ data }: PlatformMentionsProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+        <h2 className="text-3xl font-display bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
           Platform Mentions
         </h2>
-        <p className="text-muted-foreground">Real-time brand mentions across social media and news platforms</p>
+        <p className="text-muted-foreground font-medium">Real-time brand mentions across social media and news platforms</p>
       </div>
 
       <div className="flex flex-wrap gap-4 p-6 bg-gradient-to-r from-gray-900/50 to-gray-800/50 rounded-lg border border-white/10">
@@ -124,7 +124,7 @@ export function PlatformMentions({ data }: PlatformMentionsProps) {
                 variant={selectedPlatform === platform ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedPlatform(platform)}
-                className={`${
+                className={`font-medium ${
                   selectedPlatform === platform 
                     ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white" 
                     : "border-gray-600 text-gray-300 hover:bg-gray-700"
@@ -145,7 +145,7 @@ export function PlatformMentions({ data }: PlatformMentionsProps) {
                 variant={selectedSentiment === sentiment ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedSentiment(sentiment)}
-                className={`${
+                className={`font-medium ${
                   selectedSentiment === sentiment 
                     ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white" 
                     : "border-gray-600 text-gray-300 hover:bg-gray-700"
@@ -158,18 +158,19 @@ export function PlatformMentions({ data }: PlatformMentionsProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
+      {/* Scrollable mentions container */}
+      <div className="h-[600px] overflow-y-auto custom-scrollbar space-y-4 pr-2">
         {filteredMentions.length === 0 ? (
           <Card className="border-white/10 bg-gradient-to-br from-gray-900/50 to-gray-800/50 backdrop-blur-sm">
             <CardContent className="p-8 text-center">
-              <p className="text-muted-foreground">No mentions found for the selected filters.</p>
+              <p className="text-muted-foreground font-medium">No mentions found for the selected filters.</p>
             </CardContent>
           </Card>
         ) : (
           filteredMentions.map((mention, index) => (
             <Card 
               key={index} 
-              className={`border-white/10 bg-gradient-to-br from-gray-900/50 to-gray-800/50 backdrop-blur-sm hover:border-white/20 transition-all duration-200 border-l-4 ${getBorderColor(mention.sentiment)}`}
+              className={`border-white/10 bg-gradient-to-br from-gray-900/50 to-gray-800/50 backdrop-blur-sm hover:border-white/20 transition-all duration-200 border-l-4 ${getBorderColor(mention.sentiment)} hover:scale-[1.01]`}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-4">
@@ -178,10 +179,10 @@ export function PlatformMentions({ data }: PlatformMentionsProps) {
                       {getPlatformIcon(mention.platform)}
                     </div>
                     <div>
-                      <CardTitle className="text-base text-white">{mention.platformName}</CardTitle>
+                      <CardTitle className="text-base font-poppins font-semibold text-white">{mention.platformName}</CardTitle>
                       <div className="flex items-center gap-2 mt-1">
                         <Calendar className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-muted-foreground font-medium">
                           {formatDate(mention.date)}
                         </span>
                       </div>
@@ -191,7 +192,7 @@ export function PlatformMentions({ data }: PlatformMentionsProps) {
                     {getSentimentIcon(mention.sentiment)}
                     <Badge 
                       variant="outline" 
-                      className={`${
+                      className={`font-medium ${
                         mention.sentiment === 'positive' ? 'border-emerald-500/30 text-emerald-400' :
                         mention.sentiment === 'negative' ? 'border-red-500/30 text-red-400' :
                         'border-amber-500/30 text-amber-400'
@@ -203,7 +204,7 @@ export function PlatformMentions({ data }: PlatformMentionsProps) {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-gray-200 leading-relaxed text-sm">
+                <p className="text-gray-200 leading-relaxed text-sm font-inter">
                   {mention.text}
                 </p>
                 
@@ -211,8 +212,8 @@ export function PlatformMentions({ data }: PlatformMentionsProps) {
                   <div className="flex items-start gap-2">
                     <TrendingUp className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
                     <div>
-                      <div className="text-xs font-medium text-blue-400 mb-1">Ethical Context</div>
-                      <p className="text-xs text-gray-300 leading-relaxed">
+                      <div className="text-xs font-semibold text-blue-400 mb-1">Ethical Context</div>
+                      <p className="text-xs text-gray-300 leading-relaxed font-inter">
                         {mention.ethical_context}
                       </p>
                     </div>
@@ -221,8 +222,8 @@ export function PlatformMentions({ data }: PlatformMentionsProps) {
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Source:</span>
-                    <span className={`text-xs font-medium ${getPlatformColor(mention.platformName)}`}>
+                    <span className="text-xs text-muted-foreground font-medium">Source:</span>
+                    <span className={`text-xs font-semibold ${getPlatformColor(mention.platformName)}`}>
                       {mention.platformName}
                     </span>
                   </div>
@@ -230,7 +231,7 @@ export function PlatformMentions({ data }: PlatformMentionsProps) {
                     variant="outline"
                     size="sm"
                     asChild
-                    className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"
+                    className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white font-medium"
                   >
                     <a 
                       href={mention.url} 
@@ -250,9 +251,9 @@ export function PlatformMentions({ data }: PlatformMentionsProps) {
       </div>
 
       {filteredMentions.length > 0 && (
-        <div className="text-center p-4">
-          <p className="text-sm text-muted-foreground">
-            Showing {filteredMentions.length} of {allMentions.length} mentions
+        <div className="text-center p-4 border-t border-white/10">
+          <p className="text-sm text-muted-foreground font-medium">
+            Showing <span className="font-semibold text-white">{filteredMentions.length}</span> of <span className="font-semibold text-white">{allMentions.length}</span> mentions
           </p>
         </div>
       )}
