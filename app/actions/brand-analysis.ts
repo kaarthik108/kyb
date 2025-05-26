@@ -52,7 +52,7 @@ export async function startBrandAnalysis(brandData: { brand: string; location: s
       .select('*')
       .eq('question', expectedQuestion)
       .in('status', ['pending', 'running', 'completed', 'failed'])
-      .order('created_at', { ascending: false })
+      .order('updated_at', { ascending: false })
       .limit(1);
     
     const queryTime = Date.now() - queryStart;
