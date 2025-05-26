@@ -4,19 +4,22 @@ import { transformApiData } from "@/lib/data";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
 
 interface DashboardPageProps {
-  params: { id: string };
-  searchParams: { 
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ 
     brand?: string; 
     location?: string; 
     category?: string; 
-  };
+  }>;
 }
 
 export default async function DashboardPage({ params, searchParams }: DashboardPageProps) {
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  
   const brandInfo = {
-    brand: searchParams.brand || 'Unknown Brand',
-    location: searchParams.location || 'Global',
-    category: searchParams.category || 'General'
+    brand: resolvedSearchParams.brand || 'Unknown Brand',
+    location: resolvedSearchParams.location || 'Global',
+    category: resolvedSearchParams.category || 'General'
   };
 
   try {
