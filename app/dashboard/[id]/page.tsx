@@ -1,5 +1,5 @@
-import { notFound } from "next/navigation";
-import { startBrandAnalysis } from "@/app/actions/brand-analysis";
+import { notFound, redirect } from "next/navigation";
+import { checkAnalysisStatus } from "@/app/actions/brand-analysis";
 import { transformApiData, ApiResponse } from "@/lib/data";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
 import { DashboardPolling } from "@/components/dashboard/dashboard-polling";
@@ -9,12 +9,14 @@ interface DashboardPageProps {
   searchParams: Promise<{ 
     brand?: string; 
     location?: string; 
-    category?: string; 
+    category?: string;
+    userId?: string;
+    sessionId?: string;
+    cached?: string;
   }>;
 }
 
 export default async function DashboardPage({ params, searchParams }: DashboardPageProps) {
-  const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
   
   const brandInfo = {
@@ -24,15 +26,21 @@ export default async function DashboardPage({ params, searchParams }: DashboardP
   };
 
   try {
-    const result = await startBrandAnalysis(brandInfo);
-    
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to start analysis');
+    // If no userId or sessionId, redirect to home
+    if (!resolvedSearchParams.userId || !resolvedSearchParams.sessionId) {
+      redirect('/');
     }
 
-    // If we have cached data, show it immediately
-    if (result.cached && result.data) {
-      const apiData = result.data as ApiResponse;
+    // Check analysis status in database
+    const result = await checkAnalysisStatus(resolvedSearchParams.userId, resolvedSearchParams.sessionId);
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to check analysis status');
+    }
+
+    // If analysis is completed, show results
+    if (result.data && result.data.status === 'completed') {
+      const apiData = result.data.results as ApiResponse;
       const transformedData = transformApiData(apiData);
       return (
         <DashboardClient 
@@ -43,20 +51,14 @@ export default async function DashboardPage({ params, searchParams }: DashboardP
       );
     }
 
-    // If we have polling identifiers, start polling
-    if (result.data && typeof result.data === 'object' && 'userId' in result.data && 'sessionId' in result.data) {
-      const pollingData = result.data as { userId: string; sessionId: string };
-      return (
-        <DashboardPolling 
-          userId={pollingData.userId}
-          sessionId={pollingData.sessionId}
-          brandInfo={brandInfo}
-        />
-      );
-    }
-
-    // Fallback
-    notFound();
+    // If analysis is not completed (pending, running, etc.), start polling
+    return (
+      <DashboardPolling 
+        userId={resolvedSearchParams.userId}
+        sessionId={resolvedSearchParams.sessionId}
+        brandInfo={brandInfo}
+      />
+    );
 
   } catch (error) {
     console.error('Dashboard error:', error);

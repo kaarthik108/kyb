@@ -2,20 +2,12 @@
 
 import { createClient } from '@/lib/supabase-ssr';
 import { Redis } from '@upstash/redis';
+import { generateRandomId } from '@/lib/utils';
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL!,
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 });
-
-function generateRandomId(length: number = 16): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
 
 function generateCacheKey(brand: string, location: string, category: string): string {
   return `brand_analysis:${brand.toLowerCase()}:${location.toLowerCase()}:${category.toLowerCase()}`;
@@ -23,7 +15,10 @@ function generateCacheKey(brand: string, location: string, category: string): st
 
 export async function startBrandAnalysis(brandData: { brand: string; location: string; category: string }) {
   try {
-    const { brand, location, category } = brandData;
+    const { brand: brandName, location: locationName, category: categoryName } = brandData;
+    const brand = brandName.toLowerCase();
+    const location = locationName.toLowerCase();
+    const category = categoryName.toLowerCase();
     
     // Check if cached first
     // const cachedData = await redis.get(generateCacheKey(brand, location, category));
@@ -43,13 +38,14 @@ export async function startBrandAnalysis(brandData: { brand: string; location: s
       .from('brand_analysis_requests')
       .select('*')
       .eq('question', expectedQuestion)
-      .in('status', ['pending', 'running', 'completed'])
+      .in('status', ['pending', 'running', 'completed', 'failed'])
       .order('created_at', { ascending: false })
       .limit(1);
 
     if (error) {
       console.error('Error checking existing analysis:', error);
     }
+    console.log('Existing analysis:\n\n\n', JSON.stringify(existingAnalysis, null, 2));
 
     // If we have a completed analysis, return it
     if (existingAnalysis && existingAnalysis.length > 0) {
@@ -86,8 +82,8 @@ export async function startBrandAnalysis(brandData: { brand: string; location: s
     }
 
     // Generate new session IDs only if no existing analysis found
-    const sessionId = `session-${Math.random().toString(36).substring(2, 14)}`;
-    const userId = `user-${Math.random().toString(36).substring(2, 10)}`;
+    const sessionId = `session-${generateRandomId()}`;
+    const userId = `user-${generateRandomId()}`;
     const question = `analyze the brand ${brand} ${location} ${category}`;
     
     const endpointUrl = process.env.ENDPOINT_URL + '/query';
