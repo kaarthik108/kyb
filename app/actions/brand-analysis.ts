@@ -24,28 +24,29 @@ function generateCacheKey(brand: string, location: string, category: string): st
 export async function startBrandAnalysis(brandData: { brand: string; location: string; category: string }) {
   try {
     const { brand, location, category } = brandData;
-    const cacheKey = generateCacheKey(brand, location, category);
     
-    const cachedData = await redis.get(cacheKey);
-    if (cachedData) {
-      return { success: true, data: cachedData, cached: true };
-    }
-    
-    // Check if ENDPOINT_URL is configured
     if (!process.env.ENDPOINT_URL) {
-      console.error('ENDPOINT_URL not configured');
       return {
         success: false,
         error: 'Backend endpoint not configured. Please set ENDPOINT_URL in your environment variables.'
       };
     }
-    
-    const sessionId = `session-${generateRandomId(12)}`;
-    const userId = `user-${generateRandomId(8)}`;
+    // check if cached
+    const cachedData = await redis.get(generateCacheKey(brand, location, category));
+    if (cachedData) {
+      console.log('Returning cached data')
+      return {
+        success: true,
+        data: cachedData,
+        cached: true
+      };
+    }
+    const sessionId = `session-${Math.random().toString(36).substring(2, 14)}`;
+    const userId = `user-${Math.random().toString(36).substring(2, 10)}`;
     const question = `analyze the brand ${brand} ${location} ${category}`;
     
+
     const endpointUrl = process.env.ENDPOINT_URL + '/query';
-    console.log('Calling backend:', endpointUrl);
     
     const response = await fetch(endpointUrl, {
       method: 'POST',
@@ -65,17 +66,17 @@ export async function startBrandAnalysis(brandData: { brand: string; location: s
     if (!response.ok) {
       throw new Error(`Backend returned ${response.status}: ${response.statusText}`);
     }
-
-    await response.json();
     
+    const responseData = await response.json();
+    console.log('REsponse data', JSON.stringify(responseData, null, 2))
+    // add to cache
+    await cacheResults(responseData, brandData);
     return {
       success: true,
-      data: { userId, sessionId, status: 'started' },
-      cached: false
+      data: responseData
     };
     
   } catch (error) {
-    console.error('startBrandAnalysis error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -108,12 +109,25 @@ export async function checkDatabaseStatus(userId: string, sessionId: string) {
   }
 }
 
+export async function clearCache(brand: string, location: string, category: string) {
+  try {
+    const cacheKey = generateCacheKey(brand, location, category);
+    await redis.del(cacheKey);
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
 export async function cacheResults(results: any, query: { brand: string; location: string; category: string }) {
   try {
     const { brand, location, category } = query;
     const cacheKey = generateCacheKey(brand, location, category);
     
-    await redis.set(cacheKey, results, { ex: 3600 });
+    await redis.set(cacheKey, results, { ex: 86400 });
     return { success: true };
     
   } catch (error) {
