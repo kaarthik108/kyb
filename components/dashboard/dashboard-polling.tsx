@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { checkAnalysisStatus } from "@/app/actions/brand-analysis";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
@@ -31,17 +31,23 @@ export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPoll
   const [startTime] = useState(Date.now());
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [pollCount, setPollCount] = useState(0);
+  const hasLoggedInit = useRef(false);
+  const hasLoggedDataLoad = useRef(false);
 
   const maxTimeMs = 5 * 60 * 1000; // 5 minutes in milliseconds
   const pollInterval = 20000; // 20 seconds
 
-  logWithTimestamp('🎯 DashboardPolling component initialized', { 
-    userId, 
-    sessionId, 
-    brandInfo,
-    maxTimeMs,
-    pollInterval
-  });
+  // Only log initialization once
+  if (!hasLoggedInit.current) {
+    hasLoggedInit.current = true;
+    logWithTimestamp('🎯 DashboardPolling component initialized', { 
+      userId, 
+      sessionId, 
+      brandInfo,
+      maxTimeMs,
+      pollInterval
+    });
+  }
 
   const pollForResults = async () => {
     const pollStartTime = Date.now();
@@ -122,12 +128,14 @@ export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPoll
       startTime: new Date(startTime).toISOString()
     });
 
-    // Update current time every second for UI
-    timeInterval = setInterval(() => {
-      if (isMounted) {
-        setCurrentTime(Date.now());
-      }
-    }, 1000);
+    // Update current time every second for UI (only while loading)
+    if (loading && !data) {
+      timeInterval = setInterval(() => {
+        if (isMounted && loading && !data) {
+          setCurrentTime(Date.now());
+        }
+      }, 1000);
+    }
 
     const poll = async () => {
       if (!isMounted) {
@@ -297,11 +305,15 @@ export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPoll
     );
   }
 
-  logWithTimestamp('🎉 Rendering dashboard with data', { 
-    totalPolls: pollCount,
-    totalTime: Date.now() - startTime,
-    dataSize: JSON.stringify(data).length
-  });
+  // Log data loading only once
+  if (!hasLoggedDataLoad.current) {
+    hasLoggedDataLoad.current = true;
+    logWithTimestamp('🎉 Data loaded, rendering dashboard', { 
+      totalPolls: pollCount,
+      totalTime: Date.now() - startTime,
+      dataSize: JSON.stringify(data).length
+    });
+  }
 
   const transformedData = transformApiData(data);
 
