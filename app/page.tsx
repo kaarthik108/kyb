@@ -57,13 +57,25 @@ export default function Home() {
   };
 
   const handleAnalyze = async (brandData: { brand: string; location: string; category: string }) => {
+    const startTime = Date.now();
+    console.log(`[${new Date().toISOString()}] 🚀 Starting analysis request`, {
+      brandData,
+      userAgent: navigator.userAgent,
+      url: window.location.href
+    });
+    
     setLoading(true);
     setError(null);
     
     try {
-      console.log('Starting analysis for:', brandData);
       const result = await startBrandAnalysis(brandData);
-      console.log('Analysis result:', result);
+      const duration = Date.now() - startTime;
+      console.log(`[${new Date().toISOString()}] 📊 Analysis request completed in ${duration}ms`, {
+        success: result.success,
+        cached: result.cached,
+        hasData: !!result.data,
+        error: result.error
+      });
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to start brand analysis');
@@ -90,11 +102,21 @@ export default function Home() {
         searchParams.set('cached', 'true');
       }
       
-      console.log('Redirecting to:', `/dashboard/${dashboardId}?${searchParams.toString()}`);
-      router.push(`/dashboard/${dashboardId}?${searchParams.toString()}`);
+      const redirectUrl = `/dashboard/${dashboardId}?${searchParams.toString()}`;
+      console.log(`[${new Date().toISOString()}] 🔄 Redirecting to dashboard`, {
+        redirectUrl,
+        dashboardId,
+        searchParams: Object.fromEntries(searchParams.entries())
+      });
+      router.push(redirectUrl);
       
     } catch (err) {
-      console.error('Analysis error:', err);
+      const duration = Date.now() - startTime;
+      console.error(`[${new Date().toISOString()}] ❌ Analysis error after ${duration}ms`, {
+        error: err instanceof Error ? err.message : 'An error occurred',
+        stack: err instanceof Error ? err.stack : undefined,
+        brandData
+      });
       setError(err instanceof Error ? err.message : 'An error occurred');
       setLoading(false);
     }

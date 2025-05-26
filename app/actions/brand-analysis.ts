@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase-ssr';
 import { Redis } from '@upstash/redis';
-import { generateRandomId } from '@/lib/utils';
+import { generateRandomId, logWithContext, logEnvironmentInfo } from '@/lib/utils';
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL!,
@@ -13,27 +13,40 @@ function generateCacheKey(brand: string, location: string, category: string): st
   return `brand_analysis:${brand.toLowerCase()}:${location.toLowerCase()}:${category.toLowerCase()}`;
 }
 
+function logWithTimestamp(message: string, data?: any) {
+  logWithContext('BRAND_ANALYSIS', message, data);
+}
+
 export async function startBrandAnalysis(brandData: { brand: string; location: string; category: string }) {
+  const startTime = Date.now();
+  
+  // Log environment info on first call
+  logEnvironmentInfo();
+  
+  logWithTimestamp('🚀 Starting brand analysis', { 
+    brandData, 
+    environment: process.env.NODE_ENV,
+    endpointUrl: process.env.ENDPOINT_URL ? 'configured' : 'missing',
+    apiToken: process.env.API_TOKEN ? 'configured' : 'missing'
+  });
+
   try {
     const { brand: brandName, location: locationName, category: categoryName } = brandData;
     const brand = brandName.toLowerCase();
     const location = locationName.toLowerCase();
     const category = categoryName.toLowerCase();
     
-    // Check if cached first
-    // const cachedData = await redis.get(generateCacheKey(brand, location, category));
-    // if (cachedData) {
-    //   console.log('Returning cached data');
-    //   return {
-    //     success: true,
-    //     data: cachedData,
-    //     cached: true
-    //   };
-    // }
+    logWithTimestamp('📝 Processed input data', { brand, location, category });
     
     // Check if there's an existing analysis in progress or completed
+    logWithTimestamp('🔍 Creating Supabase client...');
     const supabase = await createClient();
+    logWithTimestamp('✅ Supabase client created successfully');
+    
     const expectedQuestion = `analyze the brand ${brand} ${location} ${category}`;
+    logWithTimestamp('🔎 Checking for existing analysis', { expectedQuestion });
+    
+    const queryStart = Date.now();
     const { data: existingAnalysis, error } = await supabase
       .from('brand_analysis_requests')
       .select('*')
@@ -41,18 +54,32 @@ export async function startBrandAnalysis(brandData: { brand: string; location: s
       .in('status', ['pending', 'running', 'completed', 'failed'])
       .order('created_at', { ascending: false })
       .limit(1);
+    
+    const queryTime = Date.now() - queryStart;
+    logWithTimestamp(`📊 Database query completed in ${queryTime}ms`);
 
     if (error) {
-      console.error('Error checking existing analysis:', error);
+      logWithTimestamp('❌ Error checking existing analysis', error);
+    } else {
+      logWithTimestamp('✅ Successfully checked existing analysis', { 
+        foundRecords: existingAnalysis?.length || 0,
+        records: existingAnalysis 
+      });
     }
-    console.log('Existing analysis:\n\n\n', JSON.stringify(existingAnalysis, null, 2));
 
     // If we have a completed analysis, return it
     if (existingAnalysis && existingAnalysis.length > 0) {
       const existing = existingAnalysis[0];
+      logWithTimestamp('📋 Found existing analysis', { 
+        status: existing.status, 
+        hasResults: !!existing.results,
+        userId: existing.user_id,
+        sessionId: existing.session_id,
+        createdAt: existing.created_at
+      });
       
       if (existing.status === 'completed' && existing.results) {
-        console.log('Found completed analysis, returning results');
+        logWithTimestamp('🎉 Returning completed analysis results');
         return {
           success: true,
           data: {
@@ -66,7 +93,7 @@ export async function startBrandAnalysis(brandData: { brand: string; location: s
       
       // If analysis is in progress, return the existing session IDs for polling
       if (existing.status === 'pending' || existing.status === 'running') {
-        console.log('Found analysis in progress, returning session IDs for polling');
+        logWithTimestamp('⏳ Analysis in progress, returning session IDs for polling');
         return {
           success: true,
           data: { 
@@ -76,9 +103,17 @@ export async function startBrandAnalysis(brandData: { brand: string; location: s
           cached: false
         };
       }
+      
+      if (existing.status === 'failed') {
+        logWithTimestamp('💥 Found failed analysis, will create new one', { 
+          errorMessage: existing.error_message,
+          failedAt: existing.updated_at 
+        });
+      }
     }
     
     if (!process.env.ENDPOINT_URL) {
+      logWithTimestamp('❌ Backend endpoint not configured');
       return {
         success: false,
         error: 'Backend endpoint not configured. Please set ENDPOINT_URL in your environment variables.'
@@ -90,9 +125,17 @@ export async function startBrandAnalysis(brandData: { brand: string; location: s
     const userId = `user-${generateRandomId()}`;
     const question = `analyze the brand ${brand} ${location} ${category}`;
     
+    logWithTimestamp('🆔 Generated new session identifiers', { userId, sessionId, question });
+    
     const endpointUrl = process.env.ENDPOINT_URL + '/query';
+    logWithTimestamp('🌐 Preparing API call', { 
+      endpointUrl,
+      hasApiToken: !!process.env.API_TOKEN,
+      payload: { userId, sessionId, question, brand_name: brand }
+    });
     
     // Fire and forget - start the analysis without waiting
+    const apiCallStart = Date.now();
     fetch(endpointUrl, {
       method: 'POST',
       headers: {
@@ -106,9 +149,42 @@ export async function startBrandAnalysis(brandData: { brand: string; location: s
         question,
         brand_name: brand
       }),
-    }).catch(error => {
-      console.error('Background API call failed:', error);
+    })
+    .then(response => {
+      const apiCallTime = Date.now() - apiCallStart;
+      logWithTimestamp(`📡 API call completed in ${apiCallTime}ms`, { 
+        status: response.status, 
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+      
+      if (!response.ok) {
+        logWithTimestamp('⚠️ API call returned non-OK status', { 
+          status: response.status, 
+          statusText: response.statusText 
+        });
+      }
+      
+      return response.text();
+    })
+    .then(responseText => {
+      logWithTimestamp('📄 API response received', { 
+        responseLength: responseText.length,
+        responsePreview: responseText.substring(0, 200) + (responseText.length > 200 ? '...' : '')
+      });
+    })
+    .catch(error => {
+      const apiCallTime = Date.now() - apiCallStart;
+      logWithTimestamp(`❌ Background API call failed after ${apiCallTime}ms`, { 
+        error: error.message,
+        stack: error.stack,
+        name: error.name
+      });
     });
+    
+    const totalTime = Date.now() - startTime;
+    logWithTimestamp(`✅ Returning session IDs for polling (total time: ${totalTime}ms)`, { userId, sessionId });
     
     // Return immediately with polling identifiers
     return {
@@ -118,6 +194,13 @@ export async function startBrandAnalysis(brandData: { brand: string; location: s
     };
     
   } catch (error) {
+    const totalTime = Date.now() - startTime;
+    logWithTimestamp(`💥 startBrandAnalysis failed after ${totalTime}ms`, { 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
+    });
+    
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -126,9 +209,15 @@ export async function startBrandAnalysis(brandData: { brand: string; location: s
 }
 
 export async function checkAnalysisStatus(userId: string, sessionId: string) {
-  try {
-    const supabase = await createClient();
+  const startTime = Date.now();
+  logWithTimestamp('🔍 Checking analysis status', { userId, sessionId });
 
+  try {
+    logWithTimestamp('🔗 Creating Supabase client for status check...');
+    const supabase = await createClient();
+    logWithTimestamp('✅ Supabase client created for status check');
+
+    const queryStart = Date.now();
     const { data, error } = await supabase
       .from('brand_analysis_requests')
       .select('*')
@@ -137,12 +226,17 @@ export async function checkAnalysisStatus(userId: string, sessionId: string) {
       .order('created_at', { ascending: false })
       .limit(1);
     
+    const queryTime = Date.now() - queryStart;
+    logWithTimestamp(`📊 Status query completed in ${queryTime}ms`);
+    
     if (error) {
+      logWithTimestamp('❌ Error in status check query', error);
       return { success: false, error: error.message };
     }
     
     // If no rows found, return pending status
     if (!data || data.length === 0) {
+      logWithTimestamp('📭 No analysis record found, returning pending status');
       return { 
         success: true, 
         data: { 
@@ -153,10 +247,26 @@ export async function checkAnalysisStatus(userId: string, sessionId: string) {
       };
     }
     
+    const record = data[0];
+    const totalTime = Date.now() - startTime;
+    logWithTimestamp(`📋 Analysis status retrieved in ${totalTime}ms`, { 
+      status: record.status,
+      hasResults: !!record.results,
+      createdAt: record.created_at,
+      updatedAt: record.updated_at,
+      errorMessage: record.error_message
+    });
+    
     // Return the most recent row
-    return { success: true, data: data[0] };
+    return { success: true, data: record };
     
   } catch (error) {
+    const totalTime = Date.now() - startTime;
+    logWithTimestamp(`💥 checkAnalysisStatus failed after ${totalTime}ms`, { 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -165,11 +275,21 @@ export async function checkAnalysisStatus(userId: string, sessionId: string) {
 }
 
 export async function clearCache(brand: string, location: string, category: string) {
+  logWithTimestamp('🗑️ Clearing cache', { brand, location, category });
+  
   try {
     const cacheKey = generateCacheKey(brand, location, category);
+    logWithTimestamp('🔑 Generated cache key', { cacheKey });
+    
     await redis.del(cacheKey);
+    logWithTimestamp('✅ Cache cleared successfully');
+    
     return { success: true };
   } catch (error) {
+    logWithTimestamp('❌ Failed to clear cache', { 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+    
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -177,28 +297,15 @@ export async function clearCache(brand: string, location: string, category: stri
   }
 }
 
-// export async function cacheResults(results: any, query: { brand: string; location: string; category: string }) {
-//   try {
-//     const { brand, location, category } = query;
-//     const cacheKey = generateCacheKey(brand, location, category);
-    
-//     await redis.set(cacheKey, results, { ex: 86400 });
-//     return { success: true };
-    
-//   } catch (error) {
-//     return {
-//       success: false,
-//       error: error instanceof Error ? error.message : 'Unknown error'
-//     };
-//   }
-// }
-
 export async function cleanupOldAnalyses() {
+  logWithTimestamp('🧹 Starting cleanup of old analyses');
+  
   try {
     const supabase = await createClient();
     
     // Delete failed analyses older than 1 hour
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    logWithTimestamp('🕐 Cleaning up failed analyses older than', { oneHourAgo });
     
     const { error } = await supabase
       .from('brand_analysis_requests')
@@ -207,13 +314,18 @@ export async function cleanupOldAnalyses() {
       .lt('created_at', oneHourAgo);
     
     if (error) {
-      console.error('Error cleaning up old analyses:', error);
+      logWithTimestamp('❌ Error cleaning up old analyses', error);
       return { success: false, error: error.message };
     }
     
+    logWithTimestamp('✅ Successfully cleaned up old analyses');
     return { success: true };
     
   } catch (error) {
+    logWithTimestamp('💥 Cleanup failed', { 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+    
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'

@@ -8,6 +8,7 @@ import { transformApiData, ApiResponse } from "@/lib/data";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle, RefreshCw, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { logWithContext } from "@/lib/utils";
 
 interface DashboardPollingProps {
   userId: string;
@@ -19,42 +20,90 @@ interface DashboardPollingProps {
   };
 }
 
+function logWithTimestamp(message: string, data?: any) {
+  logWithContext('POLLING', message, data);
+}
+
 export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPollingProps) {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [startTime] = useState(Date.now());
   const [currentTime, setCurrentTime] = useState(Date.now());
+  const [pollCount, setPollCount] = useState(0);
 
   const maxTimeMs = 5 * 60 * 1000; // 5 minutes in milliseconds
   const pollInterval = 20000; // 20 seconds
 
+  logWithTimestamp('🎯 DashboardPolling component initialized', { 
+    userId, 
+    sessionId, 
+    brandInfo,
+    maxTimeMs,
+    pollInterval
+  });
+
   const pollForResults = async () => {
+    const pollStartTime = Date.now();
+    const currentPollCount = pollCount + 1;
+    setPollCount(currentPollCount);
+    
+    logWithTimestamp(`🔄 Starting poll #${currentPollCount}`, { 
+      userId, 
+      sessionId,
+      timeElapsed: pollStartTime - startTime
+    });
+
     try {
       const result = await checkAnalysisStatus(userId, sessionId);
+      const pollDuration = Date.now() - pollStartTime;
+      
+      logWithTimestamp(`📊 Poll #${currentPollCount} completed in ${pollDuration}ms`, { 
+        success: result.success,
+        hasData: !!result.data,
+        status: result.data?.status,
+        hasResults: !!(result.data as any)?.results
+      });
       
       if (!result.success) {
+        logWithTimestamp(`❌ Poll #${currentPollCount} failed`, { error: result.error });
         throw new Error(result.error || 'Status check failed');
       }
       
       const statusData = result.data;
       
       if (statusData.status === 'completed' && statusData.results) {
-        console.log('Analysis completed, caching results');
-        
-        // Cache the results
-        // await cacheResults(statusData.results, brandInfo);
+        logWithTimestamp(`🎉 Analysis completed on poll #${currentPollCount}!`, { 
+          totalPolls: currentPollCount,
+          totalTime: Date.now() - startTime,
+          resultsSize: JSON.stringify(statusData.results).length
+        });
         
         setData(statusData.results as ApiResponse);
         setLoading(false);
         return true; // Stop polling
       } else if (statusData.status === 'failed') {
+        logWithTimestamp(`💥 Analysis failed on poll #${currentPollCount}`, { 
+          errorMessage: statusData.error_message,
+          totalPolls: currentPollCount
+        });
         throw new Error(statusData.error_message || 'Analysis failed');
+      } else {
+        logWithTimestamp(`⏳ Poll #${currentPollCount} - analysis still in progress`, { 
+          status: statusData.status,
+          timeElapsed: Date.now() - startTime,
+          nextPollIn: pollInterval
+        });
       }
       
       return false; // Continue polling
     } catch (error) {
-      console.error('Polling error:', error);
+      const pollDuration = Date.now() - pollStartTime;
+      logWithTimestamp(`💥 Poll #${currentPollCount} error after ${pollDuration}ms`, { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      
       setError(error instanceof Error ? error.message : 'Analysis failed');
       setLoading(false);
       return true; // Stop polling
@@ -65,6 +114,13 @@ export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPoll
     let timeoutId: NodeJS.Timeout;
     let isMounted = true;
 
+    logWithTimestamp('🚀 Starting polling effect', { 
+      userId, 
+      sessionId,
+      isMounted,
+      startTime: new Date(startTime).toISOString()
+    });
+
     // Update current time every second for UI
     const timeInterval = setInterval(() => {
       if (isMounted) {
@@ -73,21 +129,45 @@ export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPoll
     }, 1000);
 
     const poll = async () => {
-      if (!isMounted) return;
+      if (!isMounted) {
+        logWithTimestamp('🛑 Component unmounted, stopping poll');
+        return;
+      }
       
       const elapsed = Date.now() - startTime;
       
       // Check if we've exceeded the maximum time
       if (elapsed >= maxTimeMs) {
+        logWithTimestamp('⏰ Polling timeout reached', { 
+          elapsed,
+          maxTimeMs,
+          totalPolls: pollCount
+        });
         setError('Analysis timed out after 5 minutes');
         setLoading(false);
         return;
       }
 
+      logWithTimestamp('🔄 About to poll for results', { 
+        elapsed,
+        remainingTime: maxTimeMs - elapsed,
+        pollCount: pollCount + 1
+      });
+
       const shouldStop = await pollForResults();
       
       if (!shouldStop && isMounted) {
+        logWithTimestamp('⏭️ Scheduling next poll', { 
+          nextPollIn: pollInterval,
+          nextPollAt: new Date(Date.now() + pollInterval).toISOString()
+        });
         timeoutId = setTimeout(poll, pollInterval);
+      } else {
+        logWithTimestamp('🏁 Polling stopped', { 
+          shouldStop,
+          isMounted,
+          reason: shouldStop ? 'analysis complete/failed' : 'component unmounted'
+        });
       }
     };
 
@@ -95,6 +175,12 @@ export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPoll
     poll();
 
     return () => {
+      logWithTimestamp('🧹 Cleaning up polling effect', { 
+        isMounted,
+        timeoutId: !!timeoutId,
+        totalPolls: pollCount
+      });
+      
       isMounted = false;
       if (timeoutId) {
         clearTimeout(timeoutId);
@@ -104,8 +190,14 @@ export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPoll
   }, [userId, sessionId, startTime]);
 
   const handleRetry = () => {
+    logWithTimestamp('🔄 User initiated retry', { 
+      previousError: error,
+      totalPolls: pollCount
+    });
+    
     setError(null);
     setLoading(true);
+    setPollCount(0);
     // Reset start time for new attempt
     window.location.reload();
   };
@@ -139,7 +231,10 @@ export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPoll
                 Time elapsed: {timeElapsed}s | Time remaining: {timeRemaining}s
               </p>
               <p className="text-amber-300/70 text-xs mt-1">
-                Checking every 20 seconds
+                Polls completed: {pollCount} | Checking every 20 seconds
+              </p>
+              <p className="text-amber-300/70 text-xs mt-1">
+                Session: {sessionId.substring(0, 12)}...
               </p>
             </div>
           </div>
@@ -149,6 +244,12 @@ export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPoll
   }
 
   if (error) {
+    logWithTimestamp('❌ Displaying error state', { 
+      error,
+      totalPolls: pollCount,
+      totalTime: Date.now() - startTime
+    });
+    
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center min-h-screen gap-6">
@@ -158,6 +259,9 @@ export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPoll
               <div>
                 <h3 className="text-lg font-semibold text-red-400">Analysis Failed</h3>
                 <p className="text-sm text-muted-foreground mt-2">{error}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Polls completed: {pollCount} | Session: {sessionId.substring(0, 12)}...
+                </p>
               </div>
               <Button onClick={handleRetry}>
                 <RefreshCw className="h-4 w-4 mr-2" />
@@ -171,6 +275,11 @@ export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPoll
   }
 
   if (!data) {
+    logWithTimestamp('❓ No data available state', { 
+      totalPolls: pollCount,
+      totalTime: Date.now() - startTime
+    });
+    
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center min-h-screen">
@@ -183,6 +292,12 @@ export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPoll
       </DashboardLayout>
     );
   }
+
+  logWithTimestamp('🎉 Rendering dashboard with data', { 
+    totalPolls: pollCount,
+    totalTime: Date.now() - startTime,
+    dataSize: JSON.stringify(data).length
+  });
 
   const transformedData = transformApiData(data);
 
