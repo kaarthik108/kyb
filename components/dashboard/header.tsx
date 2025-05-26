@@ -63,13 +63,6 @@ export function Header({ brandInfo }: HeaderProps) {
               </div>
             </Button>
           </div>
-          
-          <div className="flex items-center gap-3">
-            <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 px-3 py-1">
-              <div className="w-2 h-2 bg-emerald-400 rounded-full mr-2 animate-pulse"></div>
-              Live Monitoring
-            </Badge>
-          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

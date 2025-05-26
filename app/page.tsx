@@ -177,10 +177,10 @@ export default function Home() {
             <span className="text-sm font-semibold text-blue-400">AI-Powered Analytics</span>
           </div>
           <h1 className="text-4xl font-display bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
-            Brand Intelligence Dashboard
+            BrandVibe
           </h1>
           <p className="text-muted-foreground max-w-md font-medium">
-            Harness the power of AI to understand your brand's digital presence across all major platforms
+            Unveil your brand's true digital footprint with cutting-edge AI that scans across Twitter, LinkedIn, Reddit and beyond
           </p>
         </div>
 
