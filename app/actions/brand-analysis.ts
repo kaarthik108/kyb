@@ -25,30 +25,75 @@ export async function startBrandAnalysis(brandData: { brand: string; location: s
   try {
     const { brand, location, category } = brandData;
     
+    // Check if cached first
+    // const cachedData = await redis.get(generateCacheKey(brand, location, category));
+    // if (cachedData) {
+    //   console.log('Returning cached data');
+    //   return {
+    //     success: true,
+    //     data: cachedData,
+    //     cached: true
+    //   };
+    // }
+    
+    // Check if there's an existing analysis in progress or completed
+    const supabase = await createClient();
+    const expectedQuestion = `analyze the brand ${brand} ${location} ${category}`;
+    const { data: existingAnalysis, error } = await supabase
+      .from('brand_analysis_requests')
+      .select('*')
+      .eq('question', expectedQuestion)
+      .in('status', ['pending', 'running', 'completed'])
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error('Error checking existing analysis:', error);
+    }
+
+    // If we have a completed analysis, return it
+    if (existingAnalysis && existingAnalysis.length > 0) {
+      const existing = existingAnalysis[0];
+      
+      if (existing.status === 'completed' && existing.results) {
+        console.log('Found completed analysis, returning results');
+        return {
+          success: true,
+          data: existing.results,
+          cached: true
+        };
+      }
+      
+      // If analysis is in progress, return the existing session IDs for polling
+      if (existing.status === 'pending' || existing.status === 'running') {
+        console.log('Found analysis in progress, returning session IDs for polling');
+        return {
+          success: true,
+          data: { 
+            userId: existing.user_id, 
+            sessionId: existing.session_id 
+          },
+          cached: false
+        };
+      }
+    }
+    
     if (!process.env.ENDPOINT_URL) {
       return {
         success: false,
         error: 'Backend endpoint not configured. Please set ENDPOINT_URL in your environment variables.'
       };
     }
-    // check if cached
-    const cachedData = await redis.get(generateCacheKey(brand, location, category));
-    if (cachedData) {
-      console.log('Returning cached data')
-      return {
-        success: true,
-        data: cachedData,
-        cached: true
-      };
-    }
+
+    // Generate new session IDs only if no existing analysis found
     const sessionId = `session-${Math.random().toString(36).substring(2, 14)}`;
     const userId = `user-${Math.random().toString(36).substring(2, 10)}`;
     const question = `analyze the brand ${brand} ${location} ${category}`;
     
-
     const endpointUrl = process.env.ENDPOINT_URL + '/query';
     
-    const response = await fetch(endpointUrl, {
+    // Fire and forget - start the analysis without waiting
+    fetch(endpointUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -61,19 +106,15 @@ export async function startBrandAnalysis(brandData: { brand: string; location: s
         question,
         brand_name: brand
       }),
+    }).catch(error => {
+      console.error('Background API call failed:', error);
     });
-
-    if (!response.ok) {
-      throw new Error(`Backend returned ${response.status}: ${response.statusText}`);
-    }
     
-    const responseData = await response.json();
-    console.log('REsponse data', JSON.stringify(responseData, null, 2))
-    // add to cache
-    await cacheResults(responseData, brandData);
+    // Return immediately with polling identifiers
     return {
       success: true,
-      data: responseData
+      data: { userId, sessionId },
+      cached: false
     };
     
   } catch (error) {
@@ -84,7 +125,7 @@ export async function startBrandAnalysis(brandData: { brand: string; location: s
   }
 }
 
-export async function checkDatabaseStatus(userId: string, sessionId: string) {
+export async function checkAnalysisStatus(userId: string, sessionId: string) {
   try {
     const supabase = await createClient();
 
@@ -93,13 +134,27 @@ export async function checkDatabaseStatus(userId: string, sessionId: string) {
       .select('*')
       .eq('user_id', userId)
       .eq('session_id', sessionId)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1);
     
     if (error) {
       return { success: false, error: error.message };
     }
     
-    return { success: true, data };
+    // If no rows found, return pending status
+    if (!data || data.length === 0) {
+      return { 
+        success: true, 
+        data: { 
+          status: 'pending',
+          user_id: userId,
+          session_id: sessionId
+        } 
+      };
+    }
+    
+    // Return the most recent row
+    return { success: true, data: data[0] };
     
   } catch (error) {
     return {
@@ -128,6 +183,34 @@ export async function cacheResults(results: any, query: { brand: string; locatio
     const cacheKey = generateCacheKey(brand, location, category);
     
     await redis.set(cacheKey, results, { ex: 86400 });
+    return { success: true };
+    
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+export async function cleanupOldAnalyses() {
+  try {
+    const supabase = await createClient();
+    
+    // Delete failed analyses older than 1 hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    
+    const { error } = await supabase
+      .from('brand_analysis_requests')
+      .delete()
+      .eq('status', 'failed')
+      .lt('created_at', oneHourAgo);
+    
+    if (error) {
+      console.error('Error cleaning up old analyses:', error);
+      return { success: false, error: error.message };
+    }
+    
     return { success: true };
     
   } catch (error) {
