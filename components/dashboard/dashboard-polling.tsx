@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { checkAnalysisStatus, cacheResults } from "@/app/actions/brand-analysis";
+import { checkAnalysisStatus } from "@/app/actions/brand-analysis";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { transformApiData, ApiResponse } from "@/lib/data";
@@ -43,7 +43,7 @@ export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPoll
         console.log('Analysis completed, caching results');
         
         // Cache the results
-        await cacheResults(statusData.results, brandInfo);
+        // await cacheResults(statusData.results, brandInfo);
         
         setData(statusData.results as ApiResponse);
         setLoading(false);

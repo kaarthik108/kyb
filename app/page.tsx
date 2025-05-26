@@ -79,14 +79,15 @@ export default function Home() {
         category: brandData.category,
       });
 
-      // If we got cached results, add a flag
-      if (result.cached) {
-        searchParams.set('cached', 'true');
-      } else if (result.data && typeof result.data === 'object' && 'userId' in result.data && 'sessionId' in result.data) {
-        // Add userId and sessionId for polling
+      // Always add userId and sessionId - they should be available in both cached and non-cached scenarios
+      if (result.data && typeof result.data === 'object' && 'userId' in result.data && 'sessionId' in result.data) {
         const { userId, sessionId } = result.data as { userId: string; sessionId: string };
         searchParams.set('userId', userId);
         searchParams.set('sessionId', sessionId);
+      }
+      
+      if (result.cached) {
+        searchParams.set('cached', 'true');
       }
       
       console.log('Redirecting to:', `/dashboard/${dashboardId}?${searchParams.toString()}`);

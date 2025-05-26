@@ -55,7 +55,11 @@ export async function startBrandAnalysis(brandData: { brand: string; location: s
         console.log('Found completed analysis, returning results');
         return {
           success: true,
-          data: existing.results,
+          data: {
+            results: existing.results,
+            userId: existing.user_id,
+            sessionId: existing.session_id
+          },
           cached: true
         };
       }
@@ -173,21 +177,21 @@ export async function clearCache(brand: string, location: string, category: stri
   }
 }
 
-export async function cacheResults(results: any, query: { brand: string; location: string; category: string }) {
-  try {
-    const { brand, location, category } = query;
-    const cacheKey = generateCacheKey(brand, location, category);
+// export async function cacheResults(results: any, query: { brand: string; location: string; category: string }) {
+//   try {
+//     const { brand, location, category } = query;
+//     const cacheKey = generateCacheKey(brand, location, category);
     
-    await redis.set(cacheKey, results, { ex: 86400 });
-    return { success: true };
+//     await redis.set(cacheKey, results, { ex: 86400 });
+//     return { success: true };
     
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
-  }
-}
+//   } catch (error) {
+//     return {
+//       success: false,
+//       error: error instanceof Error ? error.message : 'Unknown error'
+//     };
+//   }
+// }
 
 export async function cleanupOldAnalyses() {
   try {
