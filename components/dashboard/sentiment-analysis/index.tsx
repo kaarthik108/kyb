@@ -27,7 +27,12 @@ interface SentimentAnalysisProps {
 }
 
 export function SentimentAnalysis({ data }: SentimentAnalysisProps) {
-  const overallSentiment = data.overall_sentiment;
+  // Ensure sentiment values are valid numbers
+  const overallSentiment = {
+    positive: Number(data.overall_sentiment?.positive) || 0,
+    negative: Number(data.overall_sentiment?.negative) || 0,
+    neutral: Number(data.overall_sentiment?.neutral) || 0,
+  };
 
   const getPlatformTrend = (sentiment: number) => {
     return sentiment > 50 ? "positive" : sentiment < 30 ? "negative" : "neutral";
@@ -72,7 +77,7 @@ export function SentimentAnalysis({ data }: SentimentAnalysisProps) {
                 <Icon className={`h-4 w-4 ${getSentimentColor(trend)}`} />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-white">{value.toFixed(1)}%</div>
+                <div className="text-2xl font-bold text-white">{(isNaN(value) ? 0 : value).toFixed(1)}%</div>
                 <div className={`w-full bg-gray-700 rounded-full h-2 mt-2`}>
                   <div 
                     className={`h-2 rounded-full bg-gradient-to-r ${
@@ -80,7 +85,7 @@ export function SentimentAnalysis({ data }: SentimentAnalysisProps) {
                       color === 'amber' ? 'from-amber-600 to-amber-400' :
                       'from-red-600 to-red-400'
                     }`}
-                    style={{ width: `${value}%` }}
+                    style={{ width: `${isNaN(value) ? 0 : Math.max(0, Math.min(100, value))}%` }}
                   />
                 </div>
               </CardContent>

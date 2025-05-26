@@ -37,3 +37,28 @@ export function logEnvironmentInfo() {
     endpointUrl: process.env.ENDPOINT_URL ? `${process.env.ENDPOINT_URL.substring(0, 20)}...` : 'not set'
   });
 }
+
+export function safeNumber(value: any, fallback: number = 0): number {
+  const num = Number(value);
+  return isNaN(num) ? fallback : num;
+}
+
+export function safePercentage(value: any, total: any, fallback: number = 0): number {
+  const numValue = safeNumber(value);
+  const numTotal = safeNumber(total);
+  
+  if (numTotal === 0) return fallback;
+  
+  const percentage = (numValue / numTotal) * 100;
+  return isNaN(percentage) ? fallback : Math.max(0, Math.min(100, percentage));
+}
+
+export function formatNumber(value: any, decimals: number = 1): string {
+  const num = safeNumber(value);
+  return num.toFixed(decimals);
+}
+
+export function formatPercentage(value: any, total: any, decimals: number = 1): string {
+  const percentage = safePercentage(value, total);
+  return percentage.toFixed(decimals) + '%';
+}

@@ -36,15 +36,23 @@ export function ComparativeCards({ data }: ComparativeCardsProps) {
       <CardContent className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {Object.entries(data).map(([platform, values]) => {
-            const total = values.positive + values.neutral + values.negative;
-            const positivePercent = Math.round((values.positive / total) * 100);
-            const neutralPercent = Math.round((values.neutral / total) * 100);
-            const negativePercent = Math.round((values.negative / total) * 100);
+            // Ensure values exist and are numbers
+            const positive = Number(values?.positive) || 0;
+            const neutral = Number(values?.neutral) || 0;
+            const negative = Number(values?.negative) || 0;
+            const count = Number(values?.count) || 0;
+            
+            const total = positive + neutral + negative;
+            
+            // Handle edge case where total is 0
+            const positivePercent = total > 0 ? Math.round((positive / total) * 100) : 0;
+            const neutralPercent = total > 0 ? Math.round((neutral / total) * 100) : 0;
+            const negativePercent = total > 0 ? Math.round((negative / total) * 100) : 0;
             
             // Calculate sentiment score (0-100 scale)
-            const sentimentScore = Math.round(
-              ((values.positive * 100) + (values.neutral * 50)) / total
-            );
+            const sentimentScore = total > 0 ? Math.round(
+              ((positive * 100) + (neutral * 50)) / total
+            ) : 0;
             
             // Determine sentiment label
             let sentimentLabel = "Neutral";
@@ -117,7 +125,7 @@ export function ComparativeCards({ data }: ComparativeCardsProps) {
                 
                 {/* Add total mentions count for context */}
                 <div className="mt-3 pt-2 border-t text-xs text-muted-foreground">
-                  Total mentions: {values.count}
+                  Total mentions: {count}
                 </div>
               </div>
             );

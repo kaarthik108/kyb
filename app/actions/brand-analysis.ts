@@ -133,53 +133,99 @@ export async function startBrandAnalysis(brandData: { brand: string; location: s
       hasApiToken: !!process.env.API_TOKEN,
       payload: { userId, sessionId, question, brand_name: brand }
     });
+
+    // Test basic connectivity first
+    try {
+      logWithTimestamp('🔍 Testing basic connectivity to endpoint...');
+      const testResponse = await fetch(process.env.ENDPOINT_URL, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'brand-analytics-test/1.0',
+        },
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      logWithTimestamp('✅ Basic connectivity test result', {
+        status: testResponse.status,
+        statusText: testResponse.statusText,
+        ok: testResponse.ok
+      });
+    } catch (testError) {
+      logWithTimestamp('❌ Basic connectivity test failed', {
+        error: testError instanceof Error ? testError.message : 'Unknown error',
+        name: testError instanceof Error ? testError.name : undefined
+      });
+    }
     
     // Fire and forget - start the analysis without waiting
     const apiCallStart = Date.now();
-    fetch(endpointUrl, {
+    logWithTimestamp('🚀 Initiating background API call', { 
+      endpointUrl,
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'brand-analytics-dashboard/1.0',
-        'Authorization': `Bearer ${process.env.API_TOKEN}`,
-      },
-      body: JSON.stringify({
-        userId,
-        sessionId,
-        question,
-        brand_name: brand
-      }),
-    })
-    .then(response => {
-      const apiCallTime = Date.now() - apiCallStart;
-      logWithTimestamp(`📡 API call completed in ${apiCallTime}ms`, { 
-        status: response.status, 
-        statusText: response.statusText,
-        ok: response.ok,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-      
-      if (!response.ok) {
-        logWithTimestamp('⚠️ API call returned non-OK status', { 
-          status: response.status, 
-          statusText: response.statusText 
+      hasAuth: !!process.env.API_TOKEN
+    });
+    
+    // Use a more robust fetch with explicit error handling
+    const makeApiCall = async () => {
+      try {
+        logWithTimestamp('📡 Making fetch request to backend...');
+        
+        const response = await fetch(endpointUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'brand-analytics-dashboard/1.0',
+            'Authorization': `Bearer ${process.env.API_TOKEN}`,
+          },
+          body: JSON.stringify({
+            userId,
+            sessionId,
+            question,
+            brand_name: brand
+          }),
         });
+        
+        const apiCallTime = Date.now() - apiCallStart;
+        logWithTimestamp(`📡 API call completed in ${apiCallTime}ms`, { 
+          status: response.status, 
+          statusText: response.statusText,
+          ok: response.ok,
+          url: response.url,
+          headers: Object.fromEntries(response.headers.entries())
+        });
+        
+        if (!response.ok) {
+          logWithTimestamp('⚠️ API call returned non-OK status', { 
+            status: response.status, 
+            statusText: response.statusText 
+          });
+        }
+        
+        const responseText = await response.text();
+        logWithTimestamp('📄 API response received', { 
+          responseLength: responseText.length,
+          responsePreview: responseText.substring(0, 200) + (responseText.length > 200 ? '...' : ''),
+          fullResponse: responseText.length < 500 ? responseText : 'Response too long to log'
+        });
+        
+        return response;
+        
+      } catch (error) {
+        const apiCallTime = Date.now() - apiCallStart;
+        logWithTimestamp(`❌ Background API call failed after ${apiCallTime}ms`, { 
+          error: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          name: error instanceof Error ? error.name : undefined,
+          type: typeof error
+        });
+        throw error;
       }
-      
-      return response.text();
-    })
-    .then(responseText => {
-      logWithTimestamp('📄 API response received', { 
-        responseLength: responseText.length,
-        responsePreview: responseText.substring(0, 200) + (responseText.length > 200 ? '...' : '')
-      });
-    })
-    .catch(error => {
-      const apiCallTime = Date.now() - apiCallStart;
-      logWithTimestamp(`❌ Background API call failed after ${apiCallTime}ms`, { 
-        error: error.message,
-        stack: error.stack,
-        name: error.name
+    };
+    
+    // Execute the API call in the background
+    makeApiCall().catch(error => {
+      logWithTimestamp('💥 Unhandled API call error', { 
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
     });
     

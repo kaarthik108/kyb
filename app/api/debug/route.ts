@@ -25,41 +25,21 @@ export async function GET(req: NextRequest) {
 
     // Test API connectivity if endpoint is configured
     let apiConnectivityTest = null;
+    let apiQueryTest = null;
+    
     if (process.env.ENDPOINT_URL) {
-      try {
-        const testStartTime = Date.now();
-        const response = await fetch(process.env.ENDPOINT_URL, {
-          method: 'GET',
-          headers: {
-            'User-Agent': 'brand-analytics-debug/1.0',
-            'Authorization': process.env.API_TOKEN ? `Bearer ${process.env.API_TOKEN}` : '',
-          },
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        });
-        
-        const testDuration = Date.now() - testStartTime;
-        
-        apiConnectivityTest = {
-          success: true,
-          status: response.status,
-          statusText: response.statusText,
-          ok: response.ok,
-          duration: testDuration,
-          headers: Object.fromEntries(response.headers.entries())
-        };
-        
-        logWithContext('DEBUG', '✅ API connectivity test successful', apiConnectivityTest);
-      } catch (error) {
-        const testDuration = Date.now() - startTime;
-        apiConnectivityTest = {
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-          duration: testDuration,
-          name: error instanceof Error ? error.name : undefined
-        };
-        
-        logWithContext('DEBUG', '❌ API connectivity test failed', apiConnectivityTest);
-      }
+      // Import test functions
+      const { testBackendConnectivity, testBackendQuery } = await import('@/app/actions/test-api');
+      
+      // Test basic connectivity
+      apiConnectivityTest = await testBackendConnectivity();
+      
+      // Test query endpoint
+      apiQueryTest = await testBackendQuery({
+        brand: 'Tesla',
+        location: 'United States', 
+        category: 'Technology'
+      });
     }
 
     // Test Supabase connectivity
@@ -99,6 +79,7 @@ export async function GET(req: NextRequest) {
       timestamp: new Date().toISOString(),
       environment: envCheck,
       apiConnectivity: apiConnectivityTest,
+      apiQueryTest: apiQueryTest,
       supabaseConnectivity: supabaseTest,
       performance: {
         totalDuration,

@@ -112,6 +112,7 @@ export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPoll
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
+    let timeInterval: NodeJS.Timeout;
     let isMounted = true;
 
     logWithTimestamp('🚀 Starting polling effect', { 
@@ -122,7 +123,7 @@ export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPoll
     });
 
     // Update current time every second for UI
-    const timeInterval = setInterval(() => {
+    timeInterval = setInterval(() => {
       if (isMounted) {
         setCurrentTime(Date.now());
       }
@@ -178,6 +179,7 @@ export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPoll
       logWithTimestamp('🧹 Cleaning up polling effect', { 
         isMounted,
         timeoutId: !!timeoutId,
+        timeInterval: !!timeInterval,
         totalPolls: pollCount
       });
       
@@ -185,7 +187,9 @@ export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPoll
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
-      clearInterval(timeInterval);
+      if (timeInterval) {
+        clearInterval(timeInterval);
+      }
     };
   }, [userId, sessionId, startTime]);
 

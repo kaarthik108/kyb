@@ -21,10 +21,22 @@ export function PlatformBreakdown({ data }: PlatformBreakdownProps) {
   };
 
   const getPerformanceScore = (values: any) => {
-    const total = values.positive + values.neutral + values.negative;
-    const positivePercent = (values.positive / total) * 100;
-    const neutralPercent = (values.neutral / total) * 100;
-    return Math.round(((positivePercent * 1) + (neutralPercent * 0.5)) / 1);
+    // Ensure values exist and are numbers
+    const positive = Number(values?.positive) || 0;
+    const neutral = Number(values?.neutral) || 0;
+    const negative = Number(values?.negative) || 0;
+    
+    const total = positive + neutral + negative;
+    
+    // Handle edge case where total is 0
+    if (total === 0) return 0;
+    
+    const positivePercent = (positive / total) * 100;
+    const neutralPercent = (neutral / total) * 100;
+    const score = ((positivePercent * 1) + (neutralPercent * 0.5)) / 1;
+    
+    // Ensure the result is a valid number
+    return Math.round(isNaN(score) ? 0 : score);
   };
 
   const getPerformanceLevel = (score: number) => {
@@ -42,7 +54,7 @@ export function PlatformBreakdown({ data }: PlatformBreakdownProps) {
   };
 
   const platformEntries = Object.entries(data);
-  const maxMentions = Math.max(...platformEntries.map(([_, values]) => values.count));
+  const maxMentions = Math.max(...platformEntries.map(([_, values]) => Number(values?.count) || 0), 1);
 
   return (
     <Card className="h-full border-white/10 bg-gradient-to-br from-gray-900/50 to-gray-800/50 backdrop-blur-sm">
@@ -62,7 +74,8 @@ export function PlatformBreakdown({ data }: PlatformBreakdownProps) {
             const score = getPerformanceScore(values);
             const performance = getPerformanceLevel(score);
             const PerformanceIcon = performance.icon;
-            const mentionIntensity = (values.count / maxMentions) * 100;
+            const count = Number(values?.count) || 0;
+            const mentionIntensity = maxMentions > 0 ? (count / maxMentions) * 100 : 0;
 
             return (
               <div
@@ -80,7 +93,7 @@ export function PlatformBreakdown({ data }: PlatformBreakdownProps) {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">Score</span>
-                    <span className={`text-lg font-bold ${performance.color}`}>{score}</span>
+                    <span className={`text-lg font-bold ${performance.color}`}>{score.toString()}</span>
                   </div>
                   
                   <div className="flex items-center justify-between">
@@ -97,7 +110,7 @@ export function PlatformBreakdown({ data }: PlatformBreakdownProps) {
                           style={{ width: `${mentionIntensity}%` }}
                         />
                       </div>
-                      <span className="text-xs text-white font-medium">{values.count}</span>
+                      <span className="text-xs text-white font-medium">{count}</span>
                     </div>
                   </div>
                 </div>
