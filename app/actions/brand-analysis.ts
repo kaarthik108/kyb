@@ -75,25 +75,40 @@ async function runAnalysis(userId: string, sessionId: string, brand: string) {
   return response.ok;
 }
 
-async function getSessionStatus(userId: string, sessionId: string) {
-  const endpoint = `${Endpoint}/apps/mcp_brand_agent/users/${userId}/sessions/${sessionId}`;
+async function getSessionStatusFromSupabase(userId: string, sessionId: string) {
+  const supabase = await createClient();
   
-  const response = await fetch(endpoint, {
-    method: 'GET',
-    headers: { 'accept': 'application/json' }
-  });
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('*')
+    .eq('app_name', 'mcp_brand_agent')
+    .eq('user_id', userId)
+    .eq('id', sessionId)
+    .order('update_time', { ascending: false })
+    .limit(1);
 
-  if (!response.ok) {
+  if (error) {
+    logWithTimestamp('Supabase sessions error', { error: error.message });
     return null;
   }
 
-  const data = await response.json();
+  if (!data || data.length === 0) {
+    return { status: 'running' };
+  }
+
+  const session = data[0];
   
-  const hasResults = data.state && (
-    data.state.final_news_results || 
-    data.state.final_reddit_results || 
-    data.state.final_twitter_results || 
-    data.state.final_linkedin_results
+  if (!session.state) {
+    return { status: 'running' };
+  }
+
+  const state = typeof session.state === 'string' ? JSON.parse(session.state) : session.state;
+  
+  const hasResults = state && (
+    state.final_news_results || 
+    state.final_reddit_results || 
+    state.final_twitter_results || 
+    state.final_linkedin_results
   );
 
   if (hasResults) {
@@ -108,12 +123,12 @@ async function getSessionStatus(userId: string, sessionId: string) {
     return {
       status: 'completed',
       results: {
-        analysis_results_news: parseJson(data.state.final_news_results || data.state.news_results),
-        analysis_results_reddit: parseJson(data.state.final_reddit_results || data.state.reddit_results),
-        analysis_results_twitter: parseJson(data.state.final_twitter_results || data.state.twitter_results),
-        analysis_results_linkedin: parseJson(data.state.final_linkedin_results || data.state.linkedin_results),
-        userId: data.userId,
-        sessionId: data.id
+        analysis_results_news: parseJson(state.final_news_results || state.news_results),
+        analysis_results_reddit: parseJson(state.final_reddit_results || state.reddit_results),
+        analysis_results_twitter: parseJson(state.final_twitter_results || state.twitter_results),
+        analysis_results_linkedin: parseJson(state.final_linkedin_results || state.linkedin_results),
+        userId: session.user_id,
+        sessionId: session.id
       }
     };
   }
@@ -235,24 +250,24 @@ export async function checkAnalysisStatus(userId: string, sessionId: string) {
       return { success: true, data: data[0] };
     }
 
-    // Try API for new requests
+    // Try Supabase sessions table for new requests
     try {
-      const apiStatus = await getSessionStatus(userId, sessionId);
-      if (apiStatus) {
+      const sessionStatus = await getSessionStatusFromSupabase(userId, sessionId);
+      if (sessionStatus) {
         return {
           success: true,
           data: {
-            status: apiStatus.status,
+            status: sessionStatus.status,
             user_id: userId,
             session_id: sessionId,
-            results: apiStatus.results,
+            results: sessionStatus.results,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           }
         };
       }
-    } catch (apiError) {
-      logWithTimestamp('API failed', { error: apiError instanceof Error ? apiError.message : 'Unknown' });
+    } catch (sessionError) {
+      logWithTimestamp('Session check failed', { error: sessionError instanceof Error ? sessionError.message : 'Unknown' });
     }
 
     return {

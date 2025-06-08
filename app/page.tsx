@@ -156,7 +156,7 @@ export default function Home() {
             </p>
             <div className="p-4 rounded-lg bg-amber-900/20 border border-amber-500/30">
               <p className="text-amber-400 text-sm font-medium">
-                ⏱️ This process typically takes 2-5 minutes
+                ⏱️ This process typically takes up to 2 minutes
               </p>
               <p className="text-amber-300/70 text-xs mt-1">
                 We're analyzing Twitter, LinkedIn, Reddit, and News sources with polling every 20 seconds

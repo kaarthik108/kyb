@@ -34,7 +34,7 @@ export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPoll
   const hasLoggedInit = useRef(false);
   const hasLoggedDataLoad = useRef(false);
 
-  const maxTimeMs = 5 * 60 * 1000; // 5 minutes in milliseconds
+  const maxTimeMs = 2 * 60 * 1000; // 2 minutes in milliseconds
   const pollInterval = 20000; // 20 seconds
 
   // Only log initialization once
@@ -152,7 +152,7 @@ export function DashboardPolling({ userId, sessionId, brandInfo }: DashboardPoll
           maxTimeMs,
           totalPolls: pollCount
         });
-        setError('Analysis timed out after 5 minutes');
+        setError('Analysis timed out after 2 minutes');
         setLoading(false);
         return;
       }
