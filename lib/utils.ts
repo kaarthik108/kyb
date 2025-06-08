@@ -28,13 +28,11 @@ export function logWithContext(context: string, message: string, data?: any) {
 export function logEnvironmentInfo() {
   logWithContext('ENV', '🔧 Environment configuration', {
     nodeEnv: process.env.NODE_ENV,
-    hasEndpointUrl: !!process.env.ENDPOINT_URL,
-    hasApiToken: !!process.env.API_TOKEN,
+    apiEndpoint: process.env.ENDPOINT_URL!,
     hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
     hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     hasRedisUrl: !!process.env.UPSTASH_REDIS_REST_URL,
-    hasRedisToken: !!process.env.UPSTASH_REDIS_REST_TOKEN,
-    endpointUrl: process.env.ENDPOINT_URL ? `${process.env.ENDPOINT_URL.substring(0, 20)}...` : 'not set'
+    hasRedisToken: !!process.env.UPSTASH_REDIS_REST_TOKEN
   });
 }
 
